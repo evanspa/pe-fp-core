@@ -24,5 +24,5 @@ pe-fp-core is available from Clojars.  Add the following dependency to your
 `project.clj` file:
 
 ```
-[pe-fp-core "0.0.2"]
+[pe-fp-core "0.0.3"]
 ```
