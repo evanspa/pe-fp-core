@@ -1,4 +1,4 @@
-(defproject pe-fp-core "0.0.2"
+(defproject pe-fp-core "0.0.3-SNAPSHOT"
   :description "A Clojure library encapsulating the various domain objects associated with the fuel purchase application."
   :url "https://github.com/evanspa/pe-fp-core"
   :license {:name "MIT"
