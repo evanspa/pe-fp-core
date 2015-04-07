@@ -6,7 +6,7 @@ A Clojure library encapsulating the server-side core logic, model and data acces
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+**Table of Contents**
 
 - [About the Fuel Purchase System](#about-the-fuel-purchase-system)
   - [Client Applications](#client-applications)
@@ -19,7 +19,7 @@ A Clojure library encapsulating the server-side core logic, model and data acces
 
 ## About the Fuel Purchase System
 
-The fuel purchase system provides the ability to record and analyze your vehicle's fuel usage.  It currently consists of an iOS (iPhone) application, as well as a server-side REST application (*which the iOS app communicates with*).  In its present form, the fuel purchase system is not terribly useful.  It enables you to collect fuel usage statistics with respect to your vehicles, but none of the analysis / reporting functionality is built out yet.  
+The fuel purchase system provides the ability to record and analyze your vehicle's fuel usage.  It currently consists of an iOS (iPhone) application, as well as a server-side REST application (*which the iOS app communicates with*).  In its present form, the fuel purchase system is not terribly useful.  It enables you to collect fuel usage statistics with respect to your vehicles, but none of the analysis / reporting functionality is built out yet.
 
 ### Client Applications
 
