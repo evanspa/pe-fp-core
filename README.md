@@ -6,10 +6,14 @@ A Clojure library encapsulating the server-side core logic, model and data acces
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
+- [About the Fuel Purchase System](#about-the-fuel-purchase-system)
+  - [Client Applications](#client-applications)
+  - [Server Application](#server-application)
 - [Documentation](#documentation)
 - [Installation](#installation)
+- [pe-* Clojure Library Suite](#pe--clojure-library-suite)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
