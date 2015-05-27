@@ -60,4 +60,22 @@
   (jcore/with-try-catch-exec-as-query db-spec-dev
     (fpddl/v0-create-fuelstation-updated-count-inc-trigger-function-fn db-spec-dev))
   (jcore/with-try-catch-exec-as-query db-spec-dev
-    (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec-dev)))
+    (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec-dev))
+
+  ;; Fuel purchase log setup
+  (j/db-do-commands db-spec-dev
+                    true
+                    fpddl/v0-create-fplog-ddl)
+  (jcore/with-try-catch-exec-as-query db-spec-dev
+    (fpddl/v0-create-fplog-updated-count-inc-trigger-function-fn db-spec-dev))
+  (jcore/with-try-catch-exec-as-query db-spec-dev
+    (fpddl/v0-create-fplog-updated-count-trigger-fn db-spec-dev))
+
+  ;; Environment log setup
+  (j/db-do-commands db-spec-dev
+                    true
+                    fpddl/v0-create-envlog-ddl)
+  (jcore/with-try-catch-exec-as-query db-spec-dev
+    (fpddl/v0-create-envlog-updated-count-inc-trigger-function-fn db-spec-dev))
+  (jcore/with-try-catch-exec-as-query db-spec-dev
+    (fpddl/v0-create-envlog-updated-count-trigger-fn db-spec-dev)))

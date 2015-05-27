@@ -55,122 +55,231 @@
                         (fpddl/v0-create-fuelstation-updated-count-inc-trigger-function-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec))
+
+                      ;; Fuel purchase log setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v0-create-fplog-ddl)
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-fplog-updated-count-inc-trigger-function-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-fplog-updated-count-trigger-fn db-spec))
+
+                      ;; Environment log setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v0-create-envlog-ddl)
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-envlog-updated-count-inc-trigger-function-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-envlog-updated-count-trigger-fn db-spec))
                       (f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-#_(deftest FuelPurchaseLogs
+(deftest FuelPurchaseLogs
   (testing "Saving (and then loading) fuel purchase logs"
-    (let [u-entid (save-new-user @conn {:user/username "smithj"
-                                        :user/password "insecure"})
-          v-entid (save-new-vehicle @conn u-entid {:fpvehicle/name "300ZX"})
-          fs-entid (save-new-fuelstation @conn u-entid {:fpfuelstation/name "Sunoco"})]
-      (is (= (count (core/fplogs-for-user @conn u-entid)) 0))
-      @(d/transact @conn
-                   [(core/save-new-fplog-txnmap fp-partition
-                                                u-entid
-                                                {:fpfuelpurchaselog/vehicle v-entid
-                                                 :fpfuelpurchaselog/fuelstation fs-entid
-                                                 :fpfuelpurchaselog/purchase-date (ucore/rfc7231str->instant "Mon, 01 Sep 2014 11:25:57 GMT")
-                                                 :fpfuelpurchaselog/num-gallons 12.4
-                                                 :fpfuelpurchaselog/gallon-price 3.69
-                                                 :fpfuelpurchaselog/carwash-per-gal-discount 0.08
-                                                 :fpfuelpurchaselog/got-car-wash false
-                                                 :fpfuelpurchaselog/octane 87})])
-      (let [fplogs (core/fplogs-for-user @conn u-entid)]
-        (is (= (count fplogs) 1))
-        (let [[fplog-entid fplog] (first fplogs)]
-          (is (= "Mon, 01 Sep 2014 11:25:57 GMT" (ucore/instant->rfc7231str (:fpfuelpurchaselog/purchase-date fplog))))
-          @(d/transact @conn
-                       [(core/save-fplog-txnmap u-entid
-                                                fplog-entid
-                                                {:fpfuelpurchaselog/vehicle v-entid
-                                                 :fpfuelpurchaselog/fuelstation fs-entid
-                                                 :fpfuelpurchaselog/purchase-date (ucore/rfc7231str->instant "Fri, 31 Oct 2014 09:25:57 GMT")
-                                                 :fpfuelpurchaselog/num-gallons 12.2
-                                                 :fpfuelpurchaselog/gallon-price 3.71
-                                                 :fpfuelpurchaselog/carwash-per-gal-discount 0.09
-                                                 :fpfuelpurchaselog/got-car-wash true
-                                                 :fpfuelpurchaselog/octane 91})])
-          (let [fplogs (core/fplogs-for-user @conn u-entid)]
-            (is (= (count fplogs) 1))
-            (let [[fplog-entid fplog] (first fplogs)]
-              (is (= "Fri, 31 Oct 2014 09:25:57 GMT" (ucore/instant->rfc7231str (:fpfuelpurchaselog/purchase-date fplog))))
-              ))
-          @(d/transact @conn
-                       [(core/save-new-fplog-txnmap fp-partition
-                                                    u-entid
-                                                    {:fpfuelpurchaselog/vehicle v-entid
-                                                     :fpfuelpurchaselog/fuelstation fs-entid
-                                                     :fpfuelpurchaselog/purchase-date (ucore/rfc7231str->instant "Mon, 01 Sep 2014 11:25:57 GMT")
-                                                     :fpfuelpurchaselog/num-gallons 12.8
-                                                     :fpfuelpurchaselog/gallon-price 3.74
-                                                     :fpfuelpurchaselog/octane 93})])
-          @(d/transact @conn
-                       [(core/save-new-fplog-txnmap fp-partition
-                                                    u-entid
-                                                    {:fpfuelpurchaselog/vehicle v-entid
-                                                     :fpfuelpurchaselog/fuelstation fs-entid
-                                                     :fpfuelpurchaselog/purchase-date (ucore/rfc7231str->instant "Mon, 01 Sep 2014 11:25:57 GMT")
-                                                     :fpfuelpurchaselog/num-gallons 12.9
-                                                     :fpfuelpurchaselog/gallon-price 3.84
-                                                     :fpfuelpurchaselog/octane 94})])
-          (is (= (count (core/fplogs-for-user @conn u-entid)) 3)))))))
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-fuelstation-id-1 (core/next-fuelstation-id conn)
+            new-fuelstation-id-2 (core/next-fuelstation-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-vehicle-id-2 (core/next-vehicle-id conn)
+            new-fplog-id-1 (core/next-fplog-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/created-at t1
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/created-at t1
+                                 :user/password "insecure2"})
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-1
+                                   {:fpfuelstation/created-at t2
+                                    :fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/street "110 Maple Street"
+                                    :fpfuelstation/city "Mayberry"
+                                    :fpfuelstation/state "SC"
+                                    :fpfuelstation/zip "28277"
+                                    :fpfuelstation/latitude 35.050825
+                                    :fpfuelstation/longitude -80.819054})
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-2
+                                   {:fpfuelstation/created-at t2
+                                    :fpfuelstation/name "Quick Mart"
+                                    :fpfuelstation/street "112 Broad Street"
+                                    :fpfuelstation/city "Charlotte"
+                                    :fpfuelstation/state "NC"
+                                    :fpfuelstation/zip "28272"
+                                    :fpfuelstation/latitude 33.050825
+                                    :fpfuelstation/longitude -79.819054})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/created-at t1
+                                :fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-2
+                               {:fpvehicle/created-at t2
+                                :fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
 
-#_(deftest EnvironmentLogs
+        (is (empty? (core/fplogs-for-user conn new-user-id-1)))
+        (is (empty? (core/fplogs-for-user conn new-user-id-2)))
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-1 new-fplog-id-1
+                             {:fplog/created-at t1
+                              :fplog/purchased-at t2
+                              :fplog/got-car-wash true
+                              :fplog/car-wash-per-gal-discount 0.08
+                              :fplog/num-gallons 14.7
+                              :fplog/gallon-price 2.39
+                              :fplog/octane 87})
+        (let [fplogs (core/fplogs-for-user conn new-user-id-1)]
+          (is (= 1 (count fplogs)))
+          (let [[fplog-id fplog] (first fplogs)]
+            (is (= fplog-id new-fplog-id-1))
+            (is (= fplog-id (:fplog/id fplog)))
+            (is (= new-user-id-1 (:fplog/user-id fplog)))
+            (is (= new-vehicle-id-1 (:fplog/vehicle-id fplog)))
+            (is (= new-fuelstation-id-1 (:fplog/fuelstation-id fplog)))
+            (is (= t1 (:fplog/created-at fplog)))
+            (is (= t1 (:fplog/updated-at fplog)))
+            (is (= t2 (:fplog/purchased-at fplog)))
+            (is (= true (:fplog/got-car-wash fplog)))
+            (is (= 14.7M (:fplog/num-gallons fplog)))
+            (is (= 0.08M (:fplog/car-wash-per-gal-discount fplog)))
+            (is (= 2.39M (:fplog/gallon-price fplog)))
+            (is (= 87 (:fplog/octane fplog)))))
+        (core/save-fplog conn new-fplog-id-1 {:fplog/user-id new-user-id-2
+                                              :fplog/vehicle-id new-vehicle-id-2
+                                              :fplog/fuelstation-id new-fuelstation-id-2
+                                              :fplog/updated-at t2
+                                              :fplog/purchased-at t1
+                                              :fplog/got-car-wash false
+                                              :fplog/car-wash-per-gal-discount 0.09
+                                              :fplog/num-gallons 14.8
+                                              :fplog/gallon-price 2.41
+                                              :fplog/octane 89})
+        (is (empty? (core/fplogs-for-user conn new-user-id-1)))
+        (let [fplogs (core/fplogs-for-user conn new-user-id-2)]
+          (is (= 1 (count fplogs)))
+          (let [[fplog-id fplog] (first fplogs)]
+            (is (= fplog-id new-fplog-id-1))
+            (is (= fplog-id (:fplog/id fplog)))
+            (is (= new-user-id-2 (:fplog/user-id fplog)))
+            (is (= new-vehicle-id-2 (:fplog/vehicle-id fplog)))
+            (is (= new-fuelstation-id-2 (:fplog/fuelstation-id fplog)))
+            (is (= t2 (:fplog/updated-at fplog)))
+            (is (= t1 (:fplog/created-at fplog)))
+            (is (= t1 (:fplog/purchased-at fplog)))
+            (is (= false (:fplog/got-car-wash fplog)))
+            (is (= 14.8M (:fplog/num-gallons fplog)))
+            (is (= 0.09M (:fplog/car-wash-per-gal-discount fplog)))
+            (is (= 2.41M (:fplog/gallon-price fplog)))
+            (is (= 89 (:fplog/octane fplog)))))))))
+
+(deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
-    (let [u-entid (save-new-user @conn {:user/username "smithj"
-                                        :user/password "insecure"})
-          v-entid (save-new-vehicle @conn u-entid {:fpvehicle/name "300ZX"})]
-      (is (= (count (core/envlogs-for-user @conn u-entid)) 0))
-      @(d/transact @conn
-                   [(core/save-new-envlog-txnmap fp-partition
-                                                 u-entid
-                                                 {:fpenvironmentlog/vehicle v-entid
-                                                  :fpenvironmentlog/log-date (ucore/rfc7231str->instant "Tue, 02 Sep 2014 08:03:12 GMT")
-                                                  :fpenvironmentlog/odometer 54836.0
-                                                  :fpenvironmentlog/outside-temp 67.0})])
-      (let [envlogs (core/envlogs-for-user @conn u-entid)]
-        (is (= (count envlogs) 1))
-        (let [[envlog-entid envlog] (first envlogs)]
-          (is (= "Tue, 02 Sep 2014 08:03:12 GMT" (ucore/instant->rfc7231str (:fpenvironmentlog/log-date envlog))))
-          (is (= (float 54836.0) (:fpenvironmentlog/odometer envlog)))
-          (is (= (float 67.0) (:fpenvironmentlog/outside-temp envlog)))
-          @(d/transact @conn
-                       [(core/save-envlog-txnmap u-entid
-                                                 envlog-entid
-                                                 {:fpenvironmentlog/vehicle v-entid
-                                                  :fpenvironmentlog/log-date (ucore/rfc7231str->instant "Tue, 02 Sep 2014 08:04:13 GMT")
-                                                  :fpenvironmentlog/odometer 54837.0
-                                                  :fpenvironmentlog/outside-temp 68.0
-                                                  :fpenvironmentlog/reported-avg-mpg 24.3
-                                                  :fpenvironmentlog/reported-avg-mph 25.7
-                                                  :fpenvironmentlog/dte 137})])
-          (let [envlogs (core/envlogs-for-user @conn u-entid)]
-            (is (= (count envlogs) 1))
-            (let [[envlog-entid envlog] (first envlogs)]
-              (is (= "Tue, 02 Sep 2014 08:04:13 GMT" (ucore/instant->rfc7231str (:fpenvironmentlog/log-date envlog))))
-              (is (= 54837.0 (:fpenvironmentlog/odometer envlog)))
-              (is (= (float 68.0) (:fpenvironmentlog/outside-temp envlog)))
-              (is (= 24.3 (:fpenvironmentlog/reported-avg-mpg envlog)))
-              (is (= 25.7 (:fpenvironmentlog/reported-avg-mph envlog)))
-              (is (= 137 (:fpenvironmentlog/dte envlog)))))))
-      @(d/transact @conn
-                   [(core/save-new-envlog-txnmap fp-partition
-                                                 u-entid
-                                                 {:fpenvironmentlog/vehicle v-entid
-                                                  :fpenvironmentlog/log-date (ucore/rfc7231str->instant "Wed, 03 Sep 2014 08:03:12 GMT")
-                                                  :fpenvironmentlog/odometer 54846.0
-                                                  :fpenvironmentlog/outside-temp 77.0})])
-      @(d/transact @conn
-                   [(core/save-new-envlog-txnmap fp-partition
-                                                 u-entid
-                                                 {:fpenvironmentlog/vehicle v-entid
-                                                  :fpenvironmentlog/log-date (ucore/rfc7231str->instant "Thu, 04 Sep 2014 08:03:12 GMT")
-                                                  :fpenvironmentlog/odometer 64846.0
-                                                  :fpenvironmentlog/outside-temp 87.0})])
-      (is (= (count (core/envlogs-for-user @conn u-entid)) 3)))))
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-vehicle-id-2 (core/next-vehicle-id conn)
+            new-envlog-id-1 (core/next-envlog-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/created-at t1
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/created-at t1
+                                 :user/password "insecure2"})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/created-at t1
+                                :fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-2
+                               {:fpvehicle/created-at t2
+                                :fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
+
+        (is (empty? (core/envlogs-for-user conn new-user-id-1)))
+        (is (empty? (core/envlogs-for-user conn new-user-id-2)))
+        (core/save-new-envlog conn new-user-id-1 new-vehicle-id-1 new-envlog-id-1
+                              {:envlog/created-at t1
+                               :envlog/logged-at t2
+                               :envlog/reported-avg-mpg 22.4
+                               :envlog/reported-avg-mph 21.1
+                               :envlog/reported-outside-temp 74
+                               :envlog/odometer 23650
+                               :envlog/dte 531.2})
+        (let [envlogs (core/envlogs-for-user conn new-user-id-1)]
+          (is (= 1 (count envlogs)))
+          (let [[envlog-id envlog] (first envlogs)]
+            (is (= envlog-id new-envlog-id-1))
+            (is (= envlog-id (:envlog/id envlog)))
+            (is (= new-user-id-1 (:envlog/user-id envlog)))
+            (is (= new-vehicle-id-1 (:envlog/vehicle-id envlog)))
+            (is (= t1 (:envlog/created-at envlog)))
+            (is (= t1 (:envlog/updated-at envlog)))
+            (is (= t2 (:envlog/logged-at envlog)))
+            (is (= 22.4M (:envlog/reported-avg-mpg envlog)))
+            (is (= 21.1M (:envlog/reported-avg-mph envlog)))
+            (is (= 74M (:envlog/reported-outside-temp envlog)))
+            (is (= 23650M (:envlog/odometer envlog)))
+            (is (= 531.2M (:envlog/dte envlog)))))
+        (core/save-envlog conn new-envlog-id-1 {:envlog/user-id new-user-id-2
+                                                :envlog/vehicle-id new-vehicle-id-2
+                                                :envlog/updated-at t2
+                                                :envlog/logged-at t1
+                                                :envlog/reported-avg-mpg 23.5
+                                                :envlog/reported-avg-mph 22.3
+                                                :envlog/reported-outside-temp 75.1
+                                                :envlog/odometer 21999
+                                                :envlog/dte 532.4})
+        (is (empty? (core/envlogs-for-user conn new-user-id-1)))
+        (let [envlogs (core/envlogs-for-user conn new-user-id-2)]
+          (is (= 1 (count envlogs)))
+          (let [[envlog-id envlog] (first envlogs)]
+            (is (= envlog-id new-envlog-id-1))
+            (is (= envlog-id (:envlog/id envlog)))
+            (is (= new-user-id-2 (:envlog/user-id envlog)))
+            (is (= new-vehicle-id-2 (:envlog/vehicle-id envlog)))
+            (is (= t2 (:envlog/updated-at envlog)))
+            (is (= t1 (:envlog/created-at envlog)))
+            (is (= t1 (:envlog/logged-at envlog)))
+            (is (= 23.5M (:envlog/reported-avg-mpg envlog)))
+            (is (= 22.3M (:envlog/reported-avg-mph envlog)))
+            (is (= 75.1M (:envlog/reported-outside-temp envlog)))
+            (is (= 21999M (:envlog/odometer envlog)))
+            (is (= 532.4M (:envlog/dte envlog)))))))))
 
 (deftest Fuelstation
   (testing "Saving (and then loading) fuelstation"

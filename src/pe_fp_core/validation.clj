@@ -5,38 +5,38 @@
 ;; Fuel Purchase log-related validation definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def sfplog-any-issues                 (bit-shift-left 1 0))
-(def sfplog-purchase-date-not-provided (bit-shift-left 1 1))
+(def sfplog-purchased-at-not-provided  (bit-shift-left 1 1))
 (def sfplog-num-gallons-not-provided   (bit-shift-left 1 2))
 (def sfplog-octane-not-provided        (bit-shift-left 1 3))
 (def sfplog-gallon-price-not-provided  (bit-shift-left 1 4))
 
-(defn save-fuelpurchaselog-validation-mask [fplog] 0)
+(defn save-fplog-validation-mask [fplog] 0)
 
-(defn create-fuelpurchaselog-validation-mask
-  [{purchase-date :fpfuelpurchaselog/purchase-date
-    num-gallons :fpfuelpurchaselog/num-gallons
-    octane :fpfuelpurchaselog/octane
-    gallon-price :fpfuelpurchaselog/gallon-price}]
+(defn create-fplog-validation-mask
+  [{purchase-date :fplog/purchased-at
+    num-gallons   :fplog/num-gallons
+    octane        :fplog/octane
+    gallon-price  :fplog/gallon-price}]
   (-> 0
       (ucore/add-condition #(nil? purchase-date)
-                           sfplog-purchase-date-not-provided
+                           sfplog-purchased-at-not-provided
                            sfplog-any-issues)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment log-related validation definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def senvlog-any-issues            (bit-shift-left 1 0))
-(def senvlog-date-not-provided     (bit-shift-left 1 1))
+(def senvlog-logged-at-not-provided     (bit-shift-left 1 1))
 (def senvlog-odometer-not-provided (bit-shift-left 1 2))
 
-(defn save-environmentlog-validation-mask [envlog] 0)
+(defn save-envlog-validation-mask [envlog] 0)
 
-(defn create-environmentlog-validation-mask
-  [{log-date :fpenvironmentlog/log-date
-    odometer :fpenvironmentlog/odometer}]
+(defn create-envlog-validation-mask
+  [{logged-at :envlog/logged-at
+    odometer :envlog/odometer}]
   (-> 0
-      (ucore/add-condition #(nil? log-date)
-                           senvlog-date-not-provided
+      (ucore/add-condition #(nil? logged-at)
+                           senvlog-logged-at-not-provided
                            senvlog-any-issues)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
