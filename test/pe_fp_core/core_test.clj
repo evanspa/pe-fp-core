@@ -406,6 +406,8 @@
                                 :fpvehicle/default-octane 93})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
+        (is (= 1 (count (core/vehicles-for-user-by-name conn new-user-id-1 "Jeep"))))
+        (is (= 1 (count (core/vehicles-for-user-by-name conn new-user-id-1 "JEEp"))))
         (core/save-new-vehicle conn
                                new-user-id-2
                                new-vehicle-id-3

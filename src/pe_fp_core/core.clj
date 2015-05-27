@@ -297,3 +297,12 @@
                     fpddl/tbl-vehicle)
             user-id]
            :row-fn rs->vehicle))
+
+(defn vehicles-for-user-by-name
+  [db-spec user-id name]
+  (j/query db-spec
+           [(format "select * from %s where user_id = ? and name ilike ? order by updated_at desc"
+                    fpddl/tbl-vehicle)
+            user-id
+            name]
+           :row-fn rs->vehicle))
