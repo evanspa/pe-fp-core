@@ -2,7 +2,9 @@
 
 [![Build Status](https://travis-ci.org/evanspa/pe-fp-core.svg)](https://travis-ci.org/evanspa/pe-fp-core)
 
-A Clojure library encapsulating the server-side core logic, model and data access functionality of the fuel purchase system.  pe-fp-core leverages Datomic as the underlying backend.
+A Clojure library encapsulating the server-side core logic, model and data
+access functionality of the fuel purchase system.  pe-fp-core leverages
+PostgreSQL as the underlying backend.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -41,7 +43,7 @@ pe-fp-core is available from Clojars.  Add the following dependency to your
 `project.clj` file:
 
 ```
-[pe-fp-core "0.0.3"]
+[pe-fp-core "0.0.4"]
 ```
 
 ## pe-* Clojure Library Suite
@@ -49,14 +51,16 @@ The pe-* Clojure library suite is a set of Clojure libraries to aid in the
 development of Clojure based applications.
 *(Each library is available on Clojars.)*
 + **[pe-core-utils](https://github.com/evanspa/pe-core-utils)**: provides a set
-  of various collection-related, date-related and other helpers functions.
+of various collection-related, date-related and other helpers functions.
++ **[pe-jdbc-utils](https://github.com/evanspa/pe-jdbc-utils)**: provides
+  a set of helper functions for working with JDBC.
 + **[pe-datomic-utils](https://github.com/evanspa/pe-datomic-utils)**: provides
   a set of helper functions for working with [Datomic](https://www.datomic.com).
 + **[pe-datomic-testutils](https://github.com/evanspa/pe-datomic-testutils)**: provides
   a set of helper functions to aid in unit testing Datomic-enabled functions.
 + **[pe-user-core](https://github.com/evanspa/pe-user-core)**: provides
-  a set of functions for modeling a generic user, leveraging Datomic as a
-  backend store.
+  a set of functions for modeling a generic user, leveraging PostgreSQL as the
+  underlying backend.
 + **[pe-user-testutils](https://github.com/evanspa/pe-user-testutils)**: a set of helper functions to aid in unit testing
 code that depends on the functionality of the pe-user-* libraries
 ([pe-user-core](https://github.com/evanspa/pe-user-core) and [pe-user-rest](https://github.com/evanspa/pe-user-rest)).

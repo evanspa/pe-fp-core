@@ -1,45 +1,66 @@
 (ns pe-fp-core.core-test
   (:require [clojure.test :refer :all]
-            [clojure.pprint :refer [pprint]]
-            [clojure.java.io :refer [resource]]
-            [datomic.api :as d]
+            [clojure.java.jdbc :as j]
             [pe-fp-core.core :as core]
-            [pe-datomic-utils.core :as ducore]
-            [pe-datomic-testutils.core :as dtucore]
+            [pe-user-core.ddl :as uddl]
+            [pe-fp-core.ddl :as fpddl]
+            [pe-jdbc-utils.core :as jcore]
             [pe-user-core.core :as usercore]
-            [pe-fp-core.test-utils :refer [user-schema-files
-                                           fp-schema-files
-                                           db-uri
-                                           fp-partition]]
+            [clj-time.core :as t]
+            [clj-time.coerce :as c]
+            [pe-fp-core.validation :as val]
+            [clojure.tools.logging :as log]
+            [pe-fp-core.test-utils :refer [db-spec-without-db
+                                           db-spec
+                                           db-name]]
             [pe-core-utils.core :as ucore]))
-
-(def conn (atom nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fixtures
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(use-fixtures :each (dtucore/make-db-refresher-fixture-fn db-uri
-                                                          conn
-                                                          fp-partition
-                                                          (concat user-schema-files
-                                                                  fp-schema-files)))
+(use-fixtures :each (fn [f]
+                      ;; Database setup
+                      (jcore/drop-database db-spec-without-db db-name)
+                      (jcore/create-database db-spec-without-db db-name)
 
-(defn- save-new-user
-  [conn user]
-  (ducore/save-new-entity conn (usercore/save-new-user-txnmap fp-partition user)))
+                      ;; User / auth-token setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        uddl/schema-version-ddl
+                                        uddl/v0-create-user-account-ddl
+                                        uddl/v0-add-unique-constraint-user-account-email
+                                        uddl/v0-add-unique-constraint-user-account-username
+                                        uddl/v0-create-authentication-token-ddl)
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (uddl/v0-create-updated-count-inc-trigger-function-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (uddl/v0-create-user-account-updated-count-trigger-fn db-spec))
 
-(defn- save-new-vehicle
-  [conn user-entid vehicle]
-  (ducore/save-new-entity conn (core/save-new-vehicle-txnmap fp-partition user-entid vehicle)))
+                      ;; Vehicle setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v0-create-vehicle-ddl
+                                        fpddl/v0-add-unique-constraint-vehicle-name)
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-vehicle-updated-count-inc-trigger-function-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-vehicle-updated-count-trigger-fn db-spec))
 
-(defn- save-new-fuelstation
-  [conn user-entid fuelstation]
-  (ducore/save-new-entity conn (core/save-new-fuelstation-txnmap fp-partition user-entid fuelstation)))
+                      ;; Fuelstation setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v0-create-fuelstation-ddl
+                                        fpddl/v0-create-index-on-fuelstation-name)
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-fuelstation-updated-count-inc-trigger-function-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec))
+                      (f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftest FuelPurchaseLogs
+#_(deftest FuelPurchaseLogs
   (testing "Saving (and then loading) fuel purchase logs"
     (let [u-entid (save-new-user @conn {:user/username "smithj"
                                         :user/password "insecure"})
@@ -97,7 +118,7 @@
                                                      :fpfuelpurchaselog/octane 94})])
           (is (= (count (core/fplogs-for-user @conn u-entid)) 3)))))))
 
-(deftest EnvironmentLogs
+#_(deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
     (let [u-entid (save-new-user @conn {:user/username "smithj"
                                         :user/password "insecure"})
@@ -151,108 +172,148 @@
                                                   :fpenvironmentlog/outside-temp 87.0})])
       (is (= (count (core/envlogs-for-user @conn u-entid)) 3)))))
 
-(deftest FuelStations
-  (testing "Saving (and then loading) fuel stations"
-    (let [u-entid (save-new-user @conn {:user/username "smithj"
-                                        :user/password "insecure"})]
-      (is (= (count (core/fuelstations-for-user @conn u-entid)) 0))
-      @(d/transact @conn
-                   [(core/save-new-fuelstation-txnmap fp-partition
-                                                      u-entid
-                                                      {:fpfuelstation/name "Seven Eleven"})])
-      (let [fuelstations (core/fuelstations-for-user @conn u-entid)]
-        (is (= (count fuelstations) 1))
-        (let [[fuelstation-entid fuelstation] (first fuelstations)]
-          (is (= "Seven Eleven" (:fpfuelstation/name fuelstation)))
-          @(d/transact @conn
-                       [(core/save-fuelstation-txnmap u-entid
-                                                      fuelstation-entid
-                                                      {:fpfuelstation/name "7-Eleven"
-                                                       :fpfuelstation/street "Main Street"
-                                                       :fpfuelstation/city "Charlotte"
-                                                       :fpfuelstation/state "NC"
-                                                       :fpfuelstation/zip "28277"
-                                                       :fpfuelstation/latitude 35.050825
-                                                       :fpfuelstation/longitude -80.819054})])
-          (let [fuelstations (core/fuelstations-for-user @conn u-entid)]
-            (is (= (count fuelstations) 1))
-            (let [[fuelstation-entid fuelstation] (first fuelstations)]
-              (is (= "7-Eleven" (:fpfuelstation/name fuelstation)))
-              (is (= "Main Street" (:fpfuelstation/street fuelstation)))
-              (is (= "Charlotte" (:fpfuelstation/city fuelstation)))
-              (is (= "NC" (:fpfuelstation/state fuelstation)))
-              (is (= "28277" (:fpfuelstation/zip fuelstation)))
-              (is (= 35.050825 (:fpfuelstation/latitude fuelstation)))
-              (is (= -80.819054 (:fpfuelstation/longitude fuelstation)))))))
-      @(d/transact @conn
-                   [(core/save-new-fuelstation-txnmap fp-partition
-                                                      u-entid
-                                                      {:fpfuelstation/name "Stewart's"})])
-      @(d/transact @conn
-                   [(core/save-new-fuelstation-txnmap fp-partition
-                                                      u-entid
-                                                      {:fpfuelstation/name "Cumby Farms"})])
-      (is (= (count (core/fuelstations-for-user @conn u-entid)) 3))
-      (let [u2-entid (save-new-user @conn {:user/username "cutterm"
-                                           :user/password "abc123"})]
-        (is (= (count (core/fuelstations-for-user @conn u2-entid)) 0))))))
+(deftest Fuelstation
+  (testing "Saving (and then loading) fuelstation"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-fuelstation-id-1 (core/next-fuelstation-id conn)
+            new-fuelstation-id-2 (core/next-fuelstation-id conn)
+            new-fuelstation-id-3 (core/next-fuelstation-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/created-at t1
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/created-at t1
+                                 :user/password "insecure2"})
+        (is (empty? (core/fuelstations-for-user conn new-user-id-1)))
+        (is (empty? (core/fuelstations-for-user conn new-user-id-2)))
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-1
+                                   {:fpfuelstation/created-at t2
+                                    :fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/street "110 Maple Street"
+                                    :fpfuelstation/city "Mayberry"
+                                    :fpfuelstation/state "SC"
+                                    :fpfuelstation/zip "28277"
+                                    :fpfuelstation/latitude 35.050825
+                                    :fpfuelstation/longitude -80.819054})
+        (is (= 1 (count (core/fuelstations-for-user conn new-user-id-1))))
+        (is (empty? (core/fuelstations-for-user conn new-user-id-2)))
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-2
+                                   {:fpfuelstation/created-at t2
+                                    :fpfuelstation/name "Quick Mart"
+                                    :fpfuelstation/street "112 Broad Street"
+                                    :fpfuelstation/city "Charlotte"
+                                    :fpfuelstation/state "NC"
+                                    :fpfuelstation/zip "28272"
+                                    :fpfuelstation/latitude 33.050825
+                                    :fpfuelstation/longitude -79.819054})
+        (is (= 2 (count (core/fuelstations-for-user conn new-user-id-1))))
+        (is (empty? (core/fuelstations-for-user conn new-user-id-2)))
+        (core/save-new-fuelstation conn
+                                   new-user-id-2
+                                   new-fuelstation-id-3
+                                   {:fpfuelstation/created-at t2
+                                    :fpfuelstation/name "Stewart's"
+                                    :fpfuelstation/street "94 Union Street"
+                                    :fpfuelstation/city "Schenectady"
+                                    :fpfuelstation/state "NY"
+                                    :fpfuelstation/zip "12309"
+                                    :fpfuelstation/latitude 32.050825
+                                    :fpfuelstation/longitude -69.819054})
+        (is (= 2 (count (core/fuelstations-for-user conn new-user-id-1))))
+        (is (= 1 (count (core/fuelstations-for-user conn new-user-id-2))))
+        (let [[fuelstation-id fuelstation] (first (core/fuelstations-for-user conn new-user-id-2))]
+          (is (= fuelstation-id new-fuelstation-id-3))
+          (is (= fuelstation-id (:fpfuelstation/id fuelstation)))
+          (is (= new-user-id-2 (:fpfuelstation/user-id fuelstation)))
+          (is (= t2 (:fpfuelstation/created-at fuelstation)))
+          (is (= t2 (:fpfuelstation/updated-at fuelstation)))
+          (is (= 1 (:fpfuelstation/updated-count fuelstation)))
+          (is (= "Stewart's" (:fpfuelstation/name fuelstation)))
+          (is (= "94 Union Street" (:fpfuelstation/street fuelstation)))
+          (is (= "Schenectady" (:fpfuelstation/city fuelstation)))
+          (is (= "NY" (:fpfuelstation/state fuelstation)))
+          (is (= "12309" (:fpfuelstation/zip fuelstation)))
+          (is (= 32.050825 (:fpfuelstation/latitude fuelstation)))
+          (is (= -69.819054 (:fpfuelstation/longitude fuelstation))))
+        (core/save-fuelstation conn new-fuelstation-id-3 {:fpfuelstation/user-id new-user-id-1})
+        (is (= 3 (count (core/fuelstations-for-user conn new-user-id-1))))
+        (is (= 0 (count (core/fuelstations-for-user conn new-user-id-2))))))))
 
 (deftest Vehicles
   (testing "Saving (and then loading) vehicles"
-    (let [u-entid (save-new-user @conn {:user/username "smithj"
-                                        :user/password "insecure"})]
-      (is (= (count (core/vehicles-for-user @conn u-entid)) 0))
-      @(d/transact @conn
-                   [(core/save-new-vehicle-txnmap fp-partition
-                                                  u-entid
-                                                  {:fpvehicle/name "Volkswagen"
-                                                   :fpvehicle/fuel-capacity 19.2
-                                                   :fpvehicle/min-reqd-octane 91})])
-      (let [vehicles (core/vehicles-for-user @conn u-entid)]
-        (is (= (count vehicles) 1))
-        (let [[vehicle-entid vehicle] (first vehicles)]
-          (is (= "Volkswagen" (:fpvehicle/name vehicle)))
-          (is (= 19.2 (:fpvehicle/fuel-capacity vehicle)))
-          (is (= 91 (:fpvehicle/min-reqd-octane vehicle)))
-          @(d/transact @conn
-                       [(core/save-vehicle-txnmap u-entid
-                                                  vehicle-entid
-                                                  {:fpvehicle/name "VW"
-                                                   :fpvehicle/fuel-capacity 19.3
-                                                   :fpvehicle/min-reqd-octane 93})])
-          (let [vehicles (core/vehicles-for-user @conn u-entid)]
-            (is (= (count vehicles) 1))
-            (let [[vehicle-entid vehicle] (first vehicles)]
-              (is (= "VW" (:fpvehicle/name vehicle)))
-              (is (= 19.3 (:fpvehicle/fuel-capacity vehicle)))
-              (is (= 93 (:fpvehicle/min-reqd-octane vehicle)))))
-          (let [vehicles (core/vehicles-for-user-by-name @conn u-entid "foo")]
-            (is (= (count vehicles) 0))
-            (let [vehicles (core/vehicles-for-user-by-name @conn u-entid "VW")]
-              (is (= (count vehicles) 1))))
-          (let [[vehicle-entid vehicle] (core/vehicle-for-user-by-id @conn u-entid vehicle-entid)]
-            (is (not (nil? vehicle-entid)))
-            (is (not (nil? vehicle)))
-            (is (= "VW" (:fpvehicle/name vehicle)))
-            (is (= 19.3 (:fpvehicle/fuel-capacity vehicle)))
-            (is (= 93 (:fpvehicle/min-reqd-octane vehicle))))
-          (let [junk-veh-entid 920201935]
-            (is (nil? (core/vehicle-for-user-by-id @conn u-entid junk-veh-entid))))
-          (let [junk-veh-entid 18]
-            (is (nil? (core/vehicle-for-user-by-id @conn u-entid junk-veh-entid))))))
-      @(d/transact @conn
-                   [(core/save-new-vehicle-txnmap fp-partition
-                                                  u-entid
-                                                  {:fpvehicle/name "BMW 328i"
-                                                   :fpvehicle/fuel-capacity 20.4
-                                                   :fpvehicle/min-reqd-octane 93})])
-      @(d/transact @conn
-                   [(core/save-new-vehicle-txnmap fp-partition
-                                                  u-entid
-                                                  {:fpvehicle/name "300ZX"
-                                                   :fpvehicle/fuel-capacity 21.7
-                                                   :fpvehicle/min-reqd-octane 94})])
-      (is (= (count (core/vehicles-for-user @conn u-entid)) 3))
-      (let [u2-entid (save-new-user @conn {:user/username "cutterm"
-                                           :user/password "abc123"})]
-        (is (= (count (core/vehicles-for-user @conn u2-entid)) 0))))))
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-vehicle-id-2 (core/next-vehicle-id conn)
+            new-vehicle-id-3 (core/next-vehicle-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/created-at t1
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/created-at t1
+                                 :user/password "insecure2"})
+        (is (empty? (core/vehicles-for-user conn new-user-id-1)))
+        (is (empty? (core/vehicles-for-user conn new-user-id-2)))
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/created-at t2
+                                :fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87})
+        (is (= 1 (count (core/vehicles-for-user conn new-user-id-1))))
+        (is (empty? (core/vehicles-for-user conn new-user-id-2)))
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-2
+                               {:fpvehicle/created-at t2
+                                :fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
+        (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
+        (is (empty? (core/vehicles-for-user conn new-user-id-2)))
+        (core/save-new-vehicle conn
+                               new-user-id-2
+                               new-vehicle-id-3
+                               {:fpvehicle/created-at t2
+                                :fpvehicle/name "Honda Accord"
+                                :fpvehicle/default-octane 89})
+        (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
+        (is (= 1 (count (core/vehicles-for-user conn new-user-id-2))))
+        (let [[vehicle-id vehicle] (first (core/vehicles-for-user conn new-user-id-2))]
+          (is (= vehicle-id new-vehicle-id-3))
+          (is (= vehicle-id (:fpvehicle/id vehicle)))
+          (is (= new-user-id-2 (:fpvehicle/user-id vehicle)))
+          (is (= t2 (:fpvehicle/created-at vehicle)))
+          (is (= t2 (:fpvehicle/updated-at vehicle)))
+          (is (= 89 (:fpvehicle/default-octane vehicle)))
+          (is (= 1 (:fpvehicle/updated-count vehicle)))
+          (is (= "Honda Accord" (:fpvehicle/name vehicle))))
+        (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/user-id new-user-id-1})
+        (is (= 3 (count (core/vehicles-for-user conn new-user-id-1))))
+        (is (= 0 (count (core/vehicles-for-user conn new-user-id-2))))))))
