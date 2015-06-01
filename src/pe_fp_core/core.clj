@@ -93,6 +93,15 @@
                        (ucore/replace-if-contains :deleted_at            :envlog/deleted-at from-sql-time-fn)
                        (ucore/replace-if-contains :created_at            :envlog/created-at from-sql-time-fn))])
 
+(defn entity-by-id
+  [db-spec table rs->entity-fn entity-id]
+  (let [rs (j/query db-spec
+                    [(format "select * from %s where id = ?" table)
+                     entity-id]
+                    :result-set-fn first)]
+    (when rs
+      (rs->entity-fn rs))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log-related definitions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -122,20 +131,18 @@
   [db-spec fplog-id fplog]
   (j/update! db-spec
              :fplog
-             (-> fplog
-                 (dissoc :updated_count)
-                 (dissoc :fplog/updated-count)
-                 (ucore/replace-if-contains :fplog/user-id                   :user_id)
-                 (ucore/replace-if-contains :fplog/vehicle-id                :vehicle_id)
-                 (ucore/replace-if-contains :fplog/fuelstation-id            :fuelstation_id)
-                 (ucore/replace-if-contains :fplog/purchased-at              :purchased_at c/to-timestamp)
-                 (ucore/replace-if-contains :fplog/got-car-wash              :got_car_wash)
-                 (ucore/replace-if-contains :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
-                 (ucore/replace-if-contains :fplog/num-gallons               :num_gallons)
-                 (ucore/replace-if-contains :fplog/octane                    :octane)
-                 (ucore/replace-if-contains :fplog/gallon-price              :gallon_price)
-                 (ucore/replace-if-contains :fplog/updated-at                :updated_at c/to-timestamp)
-                 (ucore/replace-if-contains :fplog/deleted-at                :deleted_at c/to-timestamp))
+             (-> {}
+                 (ucore/assoc-if-contains fplog :fplog/user-id                   :user_id)
+                 (ucore/assoc-if-contains fplog :fplog/vehicle-id                :vehicle_id)
+                 (ucore/assoc-if-contains fplog :fplog/fuelstation-id            :fuelstation_id)
+                 (ucore/assoc-if-contains fplog :fplog/purchased-at              :purchased_at c/to-timestamp)
+                 (ucore/assoc-if-contains fplog :fplog/got-car-wash              :got_car_wash)
+                 (ucore/assoc-if-contains fplog :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
+                 (ucore/assoc-if-contains fplog :fplog/num-gallons               :num_gallons)
+                 (ucore/assoc-if-contains fplog :fplog/octane                    :octane)
+                 (ucore/assoc-if-contains fplog :fplog/gallon-price              :gallon_price)
+                 (ucore/assoc-if-contains fplog :fplog/updated-at                :updated_at c/to-timestamp)
+                 (ucore/assoc-if-contains fplog :fplog/deleted-at                :deleted_at c/to-timestamp))
              ["id = ?" fplog-id]))
 
 (defn fplogs-for-user
@@ -145,6 +152,10 @@
                     fpddl/tbl-fplog)
             user-id]
            :row-fn rs->fplog))
+
+(defn fplog-by-id
+  [db-spec fplog-id]
+  (entity-by-id db-spec fpddl/tbl-fplog rs->fplog fplog-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment log-related definitions.
@@ -174,19 +185,17 @@
   [db-spec envlog-id envlog]
   (j/update! db-spec
              :envlog
-             (-> envlog
-                 (dissoc :updated_count)
-                 (dissoc :envlog/updated-count)
-                 (ucore/replace-if-contains :envlog/user-id               :user_id)
-                 (ucore/replace-if-contains :envlog/vehicle-id            :vehicle_id)
-                 (ucore/replace-if-contains :envlog/logged-at             :logged_at c/to-timestamp)
-                 (ucore/replace-if-contains :envlog/reported-avg-mpg      :reported_avg_mpg)
-                 (ucore/replace-if-contains :envlog/reported-avg-mph      :reported_avg_mph)
-                 (ucore/replace-if-contains :envlog/reported-outside-temp :reported_outside_temp)
-                 (ucore/replace-if-contains :envlog/odometer              :odometer)
-                 (ucore/replace-if-contains :envlog/dte                   :dte)
-                 (ucore/replace-if-contains :envlog/updated-at            :updated_at c/to-timestamp)
-                 (ucore/replace-if-contains :envlog/deleted-at            :deleted_at c/to-timestamp))
+             (-> {}
+                 (ucore/assoc-if-contains envlog :envlog/user-id               :user_id)
+                 (ucore/assoc-if-contains envlog :envlog/vehicle-id            :vehicle_id)
+                 (ucore/assoc-if-contains envlog :envlog/logged-at             :logged_at c/to-timestamp)
+                 (ucore/assoc-if-contains envlog :envlog/reported-avg-mpg      :reported_avg_mpg)
+                 (ucore/assoc-if-contains envlog :envlog/reported-avg-mph      :reported_avg_mph)
+                 (ucore/assoc-if-contains envlog :envlog/reported-outside-temp :reported_outside_temp)
+                 (ucore/assoc-if-contains envlog :envlog/odometer              :odometer)
+                 (ucore/assoc-if-contains envlog :envlog/dte                   :dte)
+                 (ucore/assoc-if-contains envlog :envlog/updated-at            :updated_at c/to-timestamp)
+                 (ucore/assoc-if-contains envlog :envlog/deleted-at            :deleted_at c/to-timestamp))
              ["id = ?" envlog-id]))
 
 (defn envlogs-for-user
@@ -196,6 +205,10 @@
                     fpddl/tbl-envlog)
             user-id]
            :row-fn rs->envlog))
+
+(defn envlog-by-id
+  [db-spec envlog-id]
+  (entity-by-id db-spec fpddl/tbl-envlog rs->envlog envlog-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuelstation-related definitions.
@@ -225,19 +238,17 @@
   [db-spec fuelstation-id fuelstation]
   (j/update! db-spec
              :fuelstation
-             (-> fuelstation
-                 (dissoc :updated_count)
-                 (dissoc :fpfuelstation/updated-count)
-                 (ucore/replace-if-contains :fpfuelstation/user-id    :user_id)
-                 (ucore/replace-if-contains :fpfuelstation/updated-at :updated_at c/to-timestamp)
-                 (ucore/replace-if-contains :fpfuelstation/deleted-at :deleted_at c/to-timestamp)
-                 (ucore/replace-if-contains :fpfuelstation/name       :name)
-                 (ucore/replace-if-contains :fpfuelstation/street     :street)
-                 (ucore/replace-if-contains :fpfuelstation/city       :city)
-                 (ucore/replace-if-contains :fpfuelstation/state      :state)
-                 (ucore/replace-if-contains :fpfuelstation/zip        :zip)
-                 (ucore/replace-if-contains :fpfuelstation/latitude   :latitude)
-                 (ucore/replace-if-contains :fpfuelstation/longitude  :longitude))
+             (-> {}
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/user-id    :user_id)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/updated-at :updated_at c/to-timestamp)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/deleted-at :deleted_at c/to-timestamp)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/name       :name)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/street     :street)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/city       :city)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/state      :state)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/zip        :zip)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/latitude   :latitude)
+                 (ucore/assoc-if-contains fuelstation :fpfuelstation/longitude  :longitude))
              ["id = ?" fuelstation-id]))
 
 (defn fuelstations-for-user
@@ -247,6 +258,10 @@
                     fpddl/tbl-fuelstation)
             user-id]
            :row-fn rs->fuelstation))
+
+(defn fuelstation-by-id
+  [db-spec fuelstation-id]
+  (entity-by-id db-spec fpddl/tbl-fuelstation rs->fuelstation fuelstation-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle-related definitions.
@@ -281,13 +296,12 @@
   [db-spec vehicle-id vehicle]
   (j/update! db-spec
              :vehicle
-             (-> vehicle
-                 (dissoc :updated_count)
-                 (dissoc :vehicle/updated-count)
-                 (ucore/replace-if-contains :fpvehicle/user-id    :user_id)
-                 (ucore/replace-if-contains :fpvehicle/updated-at :updated_at c/to-timestamp)
-                 (ucore/replace-if-contains :fpvehicle/deleted-at :deleted_at c/to-timestamp)
-                 (ucore/replace-if-contains :fpvehicle/name       :name))
+             (-> {}
+                 (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
+                 (ucore/assoc-if-contains vehicle :fpvehicle/updated-at     :updated_at c/to-timestamp)
+                 (ucore/assoc-if-contains vehicle :fpvehicle/deleted-at     :deleted_at c/to-timestamp)
+                 (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
+                 (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
              ["id = ?" vehicle-id]))
 
 (defn vehicles-for-user
@@ -306,3 +320,7 @@
             user-id
             name]
            :row-fn rs->vehicle))
+
+(defn vehicle-by-id
+  [db-spec vehicle-id]
+  (entity-by-id db-spec fpddl/tbl-vehicle rs->vehicle vehicle-id))
