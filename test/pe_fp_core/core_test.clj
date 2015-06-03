@@ -95,20 +95,17 @@
                                 {:user/username "smithj"
                                  :user/email "smithj@test.com"
                                  :user/name "John Smith"
-                                 :user/created-at t1
                                  :user/password "insecure"})
         (usercore/save-new-user conn
                                 new-user-id-2
                                 {:user/username "evansp"
                                  :user/email "paul@test.com"
                                  :user/name "Paul Evans"
-                                 :user/created-at t1
                                  :user/password "insecure2"})
         (core/save-new-fuelstation conn
                                    new-user-id-1
                                    new-fuelstation-id-1
-                                   {:fpfuelstation/created-at t2
-                                    :fpfuelstation/name "7-Eleven"
+                                   {:fpfuelstation/name "7-Eleven"
                                     :fpfuelstation/street "110 Maple Street"
                                     :fpfuelstation/city "Mayberry"
                                     :fpfuelstation/state "SC"
@@ -118,8 +115,7 @@
         (core/save-new-fuelstation conn
                                    new-user-id-1
                                    new-fuelstation-id-2
-                                   {:fpfuelstation/created-at t2
-                                    :fpfuelstation/name "Quick Mart"
+                                   {:fpfuelstation/name "Quick Mart"
                                     :fpfuelstation/street "112 Broad Street"
                                     :fpfuelstation/city "Charlotte"
                                     :fpfuelstation/state "NC"
@@ -129,21 +125,18 @@
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-1
-                               {:fpvehicle/created-at t1
-                                :fpvehicle/name "Jeep"
+                               {:fpvehicle/name "Jeep"
                                 :fpvehicle/default-octane 87})
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-2
-                               {:fpvehicle/created-at t2
-                                :fpvehicle/name "300Z"
+                               {:fpvehicle/name "300Z"
                                 :fpvehicle/default-octane 93})
 
         (is (empty? (core/fplogs-for-user conn new-user-id-1)))
         (is (empty? (core/fplogs-for-user conn new-user-id-2)))
         (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-1 new-fplog-id-1
-                             {:fplog/created-at t1
-                              :fplog/purchased-at t2
+                             {:fplog/purchased-at t1
                               :fplog/got-car-wash true
                               :fplog/car-wash-per-gal-discount 0.08
                               :fplog/num-gallons 14.7
@@ -157,9 +150,9 @@
             (is (= new-user-id-1 (:fplog/user-id fplog)))
             (is (= new-vehicle-id-1 (:fplog/vehicle-id fplog)))
             (is (= new-fuelstation-id-1 (:fplog/fuelstation-id fplog)))
-            (is (= t1 (:fplog/created-at fplog)))
-            (is (= t1 (:fplog/updated-at fplog)))
-            (is (= t2 (:fplog/purchased-at fplog)))
+            (is (not (nil? (:fplog/created-at fplog))))
+            (is (not (nil? (:fplog/updated-at fplog))))
+            (is (= t1 (:fplog/purchased-at fplog)))
             (is (= true (:fplog/got-car-wash fplog)))
             (is (= 14.7M (:fplog/num-gallons fplog)))
             (is (= 0.08M (:fplog/car-wash-per-gal-discount fplog)))
@@ -168,8 +161,7 @@
         (core/save-fplog conn new-fplog-id-1 {:fplog/user-id new-user-id-2
                                               :fplog/vehicle-id new-vehicle-id-2
                                               :fplog/fuelstation-id new-fuelstation-id-2
-                                              :fplog/updated-at t2
-                                              :fplog/purchased-at t1
+                                              :fplog/purchased-at t2
                                               :fplog/got-car-wash false
                                               :fplog/car-wash-per-gal-discount 0.09
                                               :fplog/num-gallons 14.8
@@ -184,9 +176,9 @@
             (is (= new-user-id-2 (:fplog/user-id fplog)))
             (is (= new-vehicle-id-2 (:fplog/vehicle-id fplog)))
             (is (= new-fuelstation-id-2 (:fplog/fuelstation-id fplog)))
-            (is (= t2 (:fplog/updated-at fplog)))
-            (is (= t1 (:fplog/created-at fplog)))
-            (is (= t1 (:fplog/purchased-at fplog)))
+            (is (not (nil? (:fplog/updated-at fplog))))
+            (is (not (nil? (:fplog/created-at fplog))))
+            (is (= t2 (:fplog/purchased-at fplog)))
             (is (= false (:fplog/got-car-wash fplog)))
             (is (= 14.8M (:fplog/num-gallons fplog)))
             (is (= 0.09M (:fplog/car-wash-per-gal-discount fplog)))
@@ -208,33 +200,28 @@
                                 {:user/username "smithj"
                                  :user/email "smithj@test.com"
                                  :user/name "John Smith"
-                                 :user/created-at t1
                                  :user/password "insecure"})
         (usercore/save-new-user conn
                                 new-user-id-2
                                 {:user/username "evansp"
                                  :user/email "paul@test.com"
                                  :user/name "Paul Evans"
-                                 :user/created-at t1
                                  :user/password "insecure2"})
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-1
-                               {:fpvehicle/created-at t1
-                                :fpvehicle/name "Jeep"
+                               { :fpvehicle/name "Jeep"
                                 :fpvehicle/default-octane 87})
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-2
-                               {:fpvehicle/created-at t2
-                                :fpvehicle/name "300Z"
+                               {:fpvehicle/name "300Z"
                                 :fpvehicle/default-octane 93})
 
         (is (empty? (core/envlogs-for-user conn new-user-id-1)))
         (is (empty? (core/envlogs-for-user conn new-user-id-2)))
         (core/save-new-envlog conn new-user-id-1 new-vehicle-id-1 new-envlog-id-1
-                              {:envlog/created-at t1
-                               :envlog/logged-at t2
+                              {:envlog/logged-at t2
                                :envlog/reported-avg-mpg 22.4
                                :envlog/reported-avg-mph 21.1
                                :envlog/reported-outside-temp 74
@@ -247,8 +234,8 @@
             (is (= envlog-id (:envlog/id envlog)))
             (is (= new-user-id-1 (:envlog/user-id envlog)))
             (is (= new-vehicle-id-1 (:envlog/vehicle-id envlog)))
-            (is (= t1 (:envlog/created-at envlog)))
-            (is (= t1 (:envlog/updated-at envlog)))
+            (is (not (nil? (:envlog/created-at envlog))))
+            (is (not (nil? (:envlog/updated-at envlog))))
             (is (= t2 (:envlog/logged-at envlog)))
             (is (= 22.4M (:envlog/reported-avg-mpg envlog)))
             (is (= 21.1M (:envlog/reported-avg-mph envlog)))
@@ -257,7 +244,6 @@
             (is (= 531.2M (:envlog/dte envlog)))))
         (core/save-envlog conn new-envlog-id-1 {:envlog/user-id new-user-id-2
                                                 :envlog/vehicle-id new-vehicle-id-2
-                                                :envlog/updated-at t2
                                                 :envlog/logged-at t1
                                                 :envlog/reported-avg-mpg 23.5
                                                 :envlog/reported-avg-mph 22.3
@@ -272,8 +258,6 @@
             (is (= envlog-id (:envlog/id envlog)))
             (is (= new-user-id-2 (:envlog/user-id envlog)))
             (is (= new-vehicle-id-2 (:envlog/vehicle-id envlog)))
-            (is (= t2 (:envlog/updated-at envlog)))
-            (is (= t1 (:envlog/created-at envlog)))
             (is (= t1 (:envlog/logged-at envlog)))
             (is (= 23.5M (:envlog/reported-avg-mpg envlog)))
             (is (= 22.3M (:envlog/reported-avg-mph envlog)))
@@ -296,22 +280,19 @@
                                 {:user/username "smithj"
                                  :user/email "smithj@test.com"
                                  :user/name "John Smith"
-                                 :user/created-at t1
                                  :user/password "insecure"})
         (usercore/save-new-user conn
                                 new-user-id-2
                                 {:user/username "evansp"
                                  :user/email "paul@test.com"
                                  :user/name "Paul Evans"
-                                 :user/created-at t1
                                  :user/password "insecure2"})
         (is (empty? (core/fuelstations-for-user conn new-user-id-1)))
         (is (empty? (core/fuelstations-for-user conn new-user-id-2)))
         (core/save-new-fuelstation conn
                                    new-user-id-1
                                    new-fuelstation-id-1
-                                   {:fpfuelstation/created-at t2
-                                    :fpfuelstation/name "7-Eleven"
+                                   {:fpfuelstation/name "7-Eleven"
                                     :fpfuelstation/street "110 Maple Street"
                                     :fpfuelstation/city "Mayberry"
                                     :fpfuelstation/state "SC"
@@ -323,8 +304,7 @@
         (core/save-new-fuelstation conn
                                    new-user-id-1
                                    new-fuelstation-id-2
-                                   {:fpfuelstation/created-at t2
-                                    :fpfuelstation/name "Quick Mart"
+                                   {:fpfuelstation/name "Quick Mart"
                                     :fpfuelstation/street "112 Broad Street"
                                     :fpfuelstation/city "Charlotte"
                                     :fpfuelstation/state "NC"
@@ -336,8 +316,7 @@
         (core/save-new-fuelstation conn
                                    new-user-id-2
                                    new-fuelstation-id-3
-                                   {:fpfuelstation/created-at t2
-                                    :fpfuelstation/name "Stewart's"
+                                   {:fpfuelstation/name "Stewart's"
                                     :fpfuelstation/street "94 Union Street"
                                     :fpfuelstation/city "Schenectady"
                                     :fpfuelstation/state "NY"
@@ -350,8 +329,8 @@
           (is (= fuelstation-id new-fuelstation-id-3))
           (is (= fuelstation-id (:fpfuelstation/id fuelstation)))
           (is (= new-user-id-2 (:fpfuelstation/user-id fuelstation)))
-          (is (= t2 (:fpfuelstation/created-at fuelstation)))
-          (is (= t2 (:fpfuelstation/updated-at fuelstation)))
+          (is (not (nil? (:fpfuelstation/created-at fuelstation))))
+          (is (not (nil? (:fpfuelstation/updated-at fuelstation))))
           (is (= 1 (:fpfuelstation/updated-count fuelstation)))
           (is (= "Stewart's" (:fpfuelstation/name fuelstation)))
           (is (= "94 Union Street" (:fpfuelstation/street fuelstation)))
@@ -379,30 +358,26 @@
                                 {:user/username "smithj"
                                  :user/email "smithj@test.com"
                                  :user/name "John Smith"
-                                 :user/created-at t1
                                  :user/password "insecure"})
         (usercore/save-new-user conn
                                 new-user-id-2
                                 {:user/username "evansp"
                                  :user/email "paul@test.com"
                                  :user/name "Paul Evans"
-                                 :user/created-at t1
                                  :user/password "insecure2"})
         (is (empty? (core/vehicles-for-user conn new-user-id-1)))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-1
-                               {:fpvehicle/created-at t2
-                                :fpvehicle/name "Jeep"
+                               {:fpvehicle/name "Jeep"
                                 :fpvehicle/default-octane 87})
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-2
-                               {:fpvehicle/created-at t2
-                                :fpvehicle/name "300Z"
+                               {:fpvehicle/name "300Z"
                                 :fpvehicle/default-octane 93})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
@@ -411,8 +386,7 @@
         (core/save-new-vehicle conn
                                new-user-id-2
                                new-vehicle-id-3
-                               {:fpvehicle/created-at t2
-                                :fpvehicle/name "Honda Accord"
+                               {:fpvehicle/name "Honda Accord"
                                 :fpvehicle/default-octane 89})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-2))))
@@ -420,8 +394,8 @@
           (is (= vehicle-id new-vehicle-id-3))
           (is (= vehicle-id (:fpvehicle/id vehicle)))
           (is (= new-user-id-2 (:fpvehicle/user-id vehicle)))
-          (is (= t2 (:fpvehicle/created-at vehicle)))
-          (is (= t2 (:fpvehicle/updated-at vehicle)))
+          (is (not (nil? (:fpvehicle/created-at vehicle))))
+          (is (not (nil? (:fpvehicle/updated-at vehicle))))
           (is (= 89 (:fpvehicle/default-octane vehicle)))
           (is (= 1 (:fpvehicle/updated-count vehicle)))
           (is (= "Honda Accord" (:fpvehicle/name vehicle))))

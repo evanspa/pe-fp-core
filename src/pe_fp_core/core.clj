@@ -110,7 +110,8 @@
   (let [validation-mask (val/save-fplog-validation-mask fplog)]
     (if (pos? (bit-and validation-mask val/sfplog-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (c/to-timestamp (:fplog/created-at fplog))]
+      (let [created-at (t/now)
+            created-at-sql (c/to-timestamp created-at)]
         (j/insert! db-spec
                    :fplog
                    {:user_id                   user-id
@@ -123,27 +124,32 @@
                     :num_gallons               (:fplog/num-gallons fplog)
                     :octane                    (:fplog/octane fplog)
                     :gallon_price              (:fplog/gallon-price fplog)
-                    :created_at                created-at
-                    :updated_at                created-at
-                    :updated_count             1})))))
+                    :created_at                created-at-sql
+                    :updated_at                created-at-sql
+                    :updated_count             1})
+        (-> fplog
+            (assoc :fplog/created-at created-at)
+            (assoc :fplog/updated-at created-at))))))
 
 (defn save-fplog
   [db-spec fplog-id fplog]
-  (j/update! db-spec
-             :fplog
-             (-> {}
-                 (ucore/assoc-if-contains fplog :fplog/user-id                   :user_id)
-                 (ucore/assoc-if-contains fplog :fplog/vehicle-id                :vehicle_id)
-                 (ucore/assoc-if-contains fplog :fplog/fuelstation-id            :fuelstation_id)
-                 (ucore/assoc-if-contains fplog :fplog/purchased-at              :purchased_at c/to-timestamp)
-                 (ucore/assoc-if-contains fplog :fplog/got-car-wash              :got_car_wash)
-                 (ucore/assoc-if-contains fplog :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
-                 (ucore/assoc-if-contains fplog :fplog/num-gallons               :num_gallons)
-                 (ucore/assoc-if-contains fplog :fplog/octane                    :octane)
-                 (ucore/assoc-if-contains fplog :fplog/gallon-price              :gallon_price)
-                 (ucore/assoc-if-contains fplog :fplog/updated-at                :updated_at c/to-timestamp)
-                 (ucore/assoc-if-contains fplog :fplog/deleted-at                :deleted_at c/to-timestamp))
-             ["id = ?" fplog-id]))
+  (let [updated-at (t/now)
+        updated-at-sql (c/to-timestamp updated-at)]
+    (j/update! db-spec
+               :fplog
+               (-> {:updated_at updated-at-sql}
+                   (ucore/assoc-if-contains fplog :fplog/user-id                   :user_id)
+                   (ucore/assoc-if-contains fplog :fplog/vehicle-id                :vehicle_id)
+                   (ucore/assoc-if-contains fplog :fplog/fuelstation-id            :fuelstation_id)
+                   (ucore/assoc-if-contains fplog :fplog/purchased-at              :purchased_at c/to-timestamp)
+                   (ucore/assoc-if-contains fplog :fplog/got-car-wash              :got_car_wash)
+                   (ucore/assoc-if-contains fplog :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
+                   (ucore/assoc-if-contains fplog :fplog/num-gallons               :num_gallons)
+                   (ucore/assoc-if-contains fplog :fplog/octane                    :octane)
+                   (ucore/assoc-if-contains fplog :fplog/gallon-price              :gallon_price))
+               ["id = ?" fplog-id])
+    (-> fplog
+        (assoc :fplog/updated-at updated-at))))
 
 (defn fplogs-for-user
   [db-spec user-id]
@@ -165,7 +171,8 @@
   (let [validation-mask (val/save-envlog-validation-mask envlog)]
     (if (pos? (bit-and validation-mask val/senvlog-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (c/to-timestamp (:envlog/created-at envlog))]
+      (let [created-at (t/now)
+            created-at-sql (c/to-timestamp created-at)]
         (j/insert! db-spec
                    :envlog
                    {:user_id               user-id
@@ -177,26 +184,31 @@
                     :reported_outside_temp (:envlog/reported-outside-temp envlog)
                     :odometer              (:envlog/odometer envlog)
                     :dte                   (:envlog/dte envlog)
-                    :created_at            created-at
-                    :updated_at            created-at
-                    :updated_count         1})))))
+                    :created_at            created-at-sql
+                    :updated_at            created-at-sql
+                    :updated_count         1})
+        (-> envlog
+            (assoc :envlog/created-at created-at)
+            (assoc :envlog/updated-at created-at))))))
 
 (defn save-envlog
   [db-spec envlog-id envlog]
-  (j/update! db-spec
-             :envlog
-             (-> {}
-                 (ucore/assoc-if-contains envlog :envlog/user-id               :user_id)
-                 (ucore/assoc-if-contains envlog :envlog/vehicle-id            :vehicle_id)
-                 (ucore/assoc-if-contains envlog :envlog/logged-at             :logged_at c/to-timestamp)
-                 (ucore/assoc-if-contains envlog :envlog/reported-avg-mpg      :reported_avg_mpg)
-                 (ucore/assoc-if-contains envlog :envlog/reported-avg-mph      :reported_avg_mph)
-                 (ucore/assoc-if-contains envlog :envlog/reported-outside-temp :reported_outside_temp)
-                 (ucore/assoc-if-contains envlog :envlog/odometer              :odometer)
-                 (ucore/assoc-if-contains envlog :envlog/dte                   :dte)
-                 (ucore/assoc-if-contains envlog :envlog/updated-at            :updated_at c/to-timestamp)
-                 (ucore/assoc-if-contains envlog :envlog/deleted-at            :deleted_at c/to-timestamp))
-             ["id = ?" envlog-id]))
+  (let [updated-at (t/now)
+        updated-at-sql (c/to-timestamp updated-at)]
+    (j/update! db-spec
+               :envlog
+               (-> {:updated_at updated-at-sql}
+                   (ucore/assoc-if-contains envlog :envlog/user-id               :user_id)
+                   (ucore/assoc-if-contains envlog :envlog/vehicle-id            :vehicle_id)
+                   (ucore/assoc-if-contains envlog :envlog/logged-at             :logged_at c/to-timestamp)
+                   (ucore/assoc-if-contains envlog :envlog/reported-avg-mpg      :reported_avg_mpg)
+                   (ucore/assoc-if-contains envlog :envlog/reported-avg-mph      :reported_avg_mph)
+                   (ucore/assoc-if-contains envlog :envlog/reported-outside-temp :reported_outside_temp)
+                   (ucore/assoc-if-contains envlog :envlog/odometer              :odometer)
+                   (ucore/assoc-if-contains envlog :envlog/dte                   :dte))
+               ["id = ?" envlog-id])
+    (-> envlog
+        (assoc :envlog/updated-at updated-at))))
 
 (defn envlogs-for-user
   [db-spec user-id]
@@ -218,7 +230,8 @@
   (let [validation-mask (val/save-fuelstation-validation-mask fuelstation)]
     (if (pos? (bit-and validation-mask val/sfs-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (c/to-timestamp (:fpfuelstation/created-at fuelstation))]
+      (let [created-at (t/now)
+            created-at-sql (c/to-timestamp created-at)]
         (j/insert! db-spec
                    :fuelstation
                    {:user_id       user-id
@@ -230,26 +243,31 @@
                     :zip           (:fpfuelstation/zip fuelstation)
                     :latitude      (:fpfuelstation/latitude fuelstation)
                     :longitude     (:fpfuelstation/longitude fuelstation)
-                    :created_at    created-at
-                    :updated_at    created-at
-                    :updated_count 1})))))
+                    :created_at    created-at-sql
+                    :updated_at    created-at-sql
+                    :updated_count 1})
+        (-> fuelstation
+            (assoc :fpfuelstation/created-at created-at)
+            (assoc :fpfuelstation/updated-at created-at))))))
 
 (defn save-fuelstation
   [db-spec fuelstation-id fuelstation]
-  (j/update! db-spec
-             :fuelstation
-             (-> {}
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/user-id    :user_id)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/updated-at :updated_at c/to-timestamp)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/deleted-at :deleted_at c/to-timestamp)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/name       :name)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/street     :street)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/city       :city)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/state      :state)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/zip        :zip)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/latitude   :latitude)
-                 (ucore/assoc-if-contains fuelstation :fpfuelstation/longitude  :longitude))
-             ["id = ?" fuelstation-id]))
+  (let [updated-at (t/now)
+        updated-at-sql (c/to-timestamp updated-at)]
+    (j/update! db-spec
+               :fuelstation
+               (-> {:updated_at updated-at-sql}
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/user-id   :user_id)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/name      :name)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/street    :street)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/city      :city)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/state     :state)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/zip       :zip)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/latitude  :latitude)
+                   (ucore/assoc-if-contains fuelstation :fpfuelstation/longitude :longitude))
+               ["id = ?" fuelstation-id])
+    (-> fuelstation
+        (assoc :fpfuelstation/updated-at updated-at))))
 
 (defn fuelstations-for-user
   [db-spec user-id]
@@ -271,7 +289,8 @@
   (let [validation-mask (val/save-vehicle-validation-mask vehicle)]
     (if (pos? (bit-and validation-mask val/sv-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (c/to-timestamp (:fpvehicle/created-at vehicle))]
+      (let [created-at (t/now)
+            created-at-sql (c/to-timestamp created-at)]
         (try
           (j/insert! db-spec
                      :vehicle
@@ -279,9 +298,12 @@
                       :id             new-vehicle-id
                       :name           (:fpvehicle/name vehicle)
                       :default_octane (:fpvehicle/default-octane vehicle)
-                      :created_at     created-at
-                      :updated_at     created-at
+                      :created_at     created-at-sql
+                      :updated_at     created-at-sql
                       :updated_count  1})
+          (-> vehicle
+              (assoc :fpvehicle/created-at created-at)
+              (assoc :fpvehicle/updated-at created-at))
           (catch java.sql.SQLException e
             (if (jcore/uniq-constraint-violated? db-spec e)
               (let [ucv (jcore/uniq-constraint-violated db-spec e)]
@@ -294,15 +316,17 @@
 
 (defn save-vehicle
   [db-spec vehicle-id vehicle]
-  (j/update! db-spec
-             :vehicle
-             (-> {}
-                 (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
-                 (ucore/assoc-if-contains vehicle :fpvehicle/updated-at     :updated_at c/to-timestamp)
-                 (ucore/assoc-if-contains vehicle :fpvehicle/deleted-at     :deleted_at c/to-timestamp)
-                 (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
-                 (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
-             ["id = ?" vehicle-id]))
+  (let [updated-at (t/now)
+        updated-at-sql (c/to-timestamp updated-at)]
+    (j/update! db-spec
+               :vehicle
+               (-> {:updated_at updated-at-sql}
+                   (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
+                   (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
+                   (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
+               ["id = ?" vehicle-id])
+    (-> vehicle
+        (assoc :fpvehicle/updated-at updated-at))))
 
 (defn vehicles-for-user
   [db-spec user-id]
