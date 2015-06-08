@@ -40,7 +40,8 @@
                       (j/db-do-commands db-spec
                                         true
                                         fpddl/v0-create-vehicle-ddl
-                                        fpddl/v0-add-unique-constraint-vehicle-name)
+                                        fpddl/v0-add-unique-constraint-vehicle-name
+                                        fpddl/v1-vehicle-add-fuel-capacity-col)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-inc-trigger-function-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
@@ -126,7 +127,8 @@
                                new-user-id-1
                                new-vehicle-id-1
                                {:fpvehicle/name "Jeep"
-                                :fpvehicle/default-octane 87})
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.2})
         (core/save-new-vehicle conn
                                new-user-id-1
                                new-vehicle-id-2
@@ -371,7 +373,8 @@
                                new-user-id-1
                                new-vehicle-id-1
                                {:fpvehicle/name "Jeep"
-                                :fpvehicle/default-octane 87})
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.3})
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
         (core/save-new-vehicle conn
@@ -387,6 +390,7 @@
                                new-user-id-2
                                new-vehicle-id-3
                                {:fpvehicle/name "Honda Accord"
+                                :fpvehicle/fuel-capacity 19.8
                                 :fpvehicle/default-octane 89})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-2))))
@@ -397,6 +401,7 @@
           (is (not (nil? (:fpvehicle/created-at vehicle))))
           (is (not (nil? (:fpvehicle/updated-at vehicle))))
           (is (= 89 (:fpvehicle/default-octane vehicle)))
+          (is (= 19.8M (:fpvehicle/fuel-capacity vehicle)))
           (is (= 1 (:fpvehicle/updated-count vehicle)))
           (is (= "Honda Accord" (:fpvehicle/name vehicle))))
         (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/user-id new-user-id-1})

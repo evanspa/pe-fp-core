@@ -36,6 +36,7 @@
                         (ucore/replace-if-contains :user_id        :fpvehicle/user-id)
                         (ucore/replace-if-contains :name           :fpvehicle/name)
                         (ucore/replace-if-contains :default_octane :fpvehicle/default-octane)
+                        (ucore/replace-if-contains :fuel_capacity  :fpvehicle/fuel-capacity)
                         (ucore/replace-if-contains :updated_count  :fpvehicle/updated-count)
                         (ucore/replace-if-contains :updated_at     :fpvehicle/updated-at from-sql-time-fn)
                         (ucore/replace-if-contains :deleted_at     :fpvehicle/deleted-at from-sql-time-fn)
@@ -298,6 +299,7 @@
                       :id             new-vehicle-id
                       :name           (:fpvehicle/name vehicle)
                       :default_octane (:fpvehicle/default-octane vehicle)
+                      :fuel_capacity  (:fpvehicle/fuel-capacity vehicle)
                       :created_at     created-at-sql
                       :updated_at     created-at-sql
                       :updated_count  1})
@@ -323,6 +325,7 @@
                (-> {:updated_at updated-at-sql}
                    (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
                    (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
+                   (ucore/assoc-if-contains vehicle :fpvehicle/fuel-capacity  :fuel_capacity)
                    (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
                ["id = ?" vehicle-id])
     (-> vehicle

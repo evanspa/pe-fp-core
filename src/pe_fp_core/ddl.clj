@@ -58,6 +58,9 @@
                                     (jcore/incrementing-trigger-function-name tbl-vehicle
                                                                               col-updated-count))))
 
+(def v1-vehicle-add-fuel-capacity-col
+  (format "ALTER TABLE %s ADD COLUMN fuel_capacity numeric NULL", tbl-vehicle))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuelstation table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
