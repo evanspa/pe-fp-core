@@ -1,6 +1,7 @@
 (ns pe-fp-core.core-test
   (:require [clojure.test :refer :all]
             [clojure.java.jdbc :as j]
+            [clojure.pprint :refer (pprint)]
             [pe-fp-core.core :as core]
             [pe-user-core.ddl :as uddl]
             [pe-fp-core.ddl :as fpddl]
@@ -41,7 +42,9 @@
                                         true
                                         fpddl/v0-create-vehicle-ddl
                                         fpddl/v0-add-unique-constraint-vehicle-name
-                                        fpddl/v1-vehicle-add-fuel-capacity-col)
+                                        fpddl/v1-vehicle-add-fuel-capacity-col
+                                        fpddl/v2-vehicle-drop-erroneous-unique-name-constraint
+                                        fpddl/v2-vehicle-add-proper-unique-name-constraint)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-inc-trigger-function-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
@@ -79,7 +82,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(deftest FuelPurchaseLogs
+#_(deftest FuelPurchaseLogs
   (testing "Saving (and then loading) fuel purchase logs"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)
@@ -187,7 +190,7 @@
             (is (= 2.41M (:fplog/gallon-price fplog)))
             (is (= 89 (:fplog/octane fplog)))))))))
 
-(deftest EnvironmentLogs
+#_(deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)
@@ -267,7 +270,7 @@
             (is (= 21999M (:envlog/odometer envlog)))
             (is (= 532.4M (:envlog/dte envlog)))))))))
 
-(deftest Fuelstation
+#_(deftest Fuelstation
   (testing "Saving (and then loading) fuelstation"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)
@@ -353,6 +356,7 @@
             new-vehicle-id-1 (core/next-vehicle-id conn)
             new-vehicle-id-2 (core/next-vehicle-id conn)
             new-vehicle-id-3 (core/next-vehicle-id conn)
+            new-vehicle-id-4 (core/next-vehicle-id conn)
             t1 (t/now)
             t2 (t/now)]
         (usercore/save-new-user conn
@@ -406,4 +410,132 @@
           (is (= "Honda Accord" (:fpvehicle/name vehicle))))
         (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/user-id new-user-id-1})
         (is (= 3 (count (core/vehicles-for-user conn new-user-id-1))))
-        (is (= 0 (count (core/vehicles-for-user conn new-user-id-2))))))))
+        (is (= 0 (count (core/vehicles-for-user conn new-user-id-2))))
+        ; let's give user id-2 replacement Honda Accord
+        (core/save-new-vehicle conn
+                               new-user-id-2
+                               new-vehicle-id-4
+                               {:fpvehicle/name "Honda Accord"
+                                :fpvehicle/fuel-capacity 19.9
+                                :fpvehicle/default-octane 90})
+        ; it's okay to use this name because it belongs to user id-1
+        (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/name "Honda Accord"})
+        (let [[vehicle-id vehicle] (core/vehicle-by-id conn new-vehicle-id-3)]
+          (is (not (nil? vehicle)))
+          (is (= new-vehicle-id-3 (:fpvehicle/id vehicle)))
+          (is (= "Honda Accord" (:fpvehicle/name vehicle)))
+          (is (= new-user-id-1 (:fpvehicle/user-id vehicle)))
+          (is (= 19.8M (:fpvehicle/fuel-capacity vehicle)))
+          (is (= 89 (:fpvehicle/default-octane vehicle))))))))
+
+(deftest Vehicles-Err-Handling-1
+  (testing "Error handling with vehicles, part 1"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-vehicle-id-2 (core/next-vehicle-id conn)
+            new-vehicle-id-3 (core/next-vehicle-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/password "insecure2"})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.3})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-2
+                               {:fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
+        (core/save-new-vehicle conn
+                               new-user-id-2
+                               new-vehicle-id-3
+                               {:fpvehicle/name "Honda Accord"
+                                :fpvehicle/fuel-capacity 19.8
+                                :fpvehicle/default-octane 89})
+        (testing "Try to save new vehicle with duplicate name for user id-2"
+          (let [new-vehicle-id-4 (core/next-vehicle-id conn)]
+            (try
+              (core/save-new-vehicle conn
+                                     new-user-id-2
+                                     new-vehicle-id-4
+                                     {:fpvehicle/name "Honda Accord"
+                                      :fpvehicle/fuel-capacity 19.7
+                                      :fpvehicle/default-octane 91})
+              (is false "Should not have reached this")
+              (catch IllegalArgumentException e
+                (let [msg-mask (Long/parseLong (.getMessage e))]
+                  (is (pos? (bit-and msg-mask val/sv-any-issues)))
+                  (is (zero? (bit-and msg-mask val/sv-name-not-provided)))
+                  (is (pos? (bit-and msg-mask val/sv-vehicle-already-exists))))))))))))
+
+(deftest Vehicles-Err-Handling-2
+  (testing "Error handling with vehicles, part 2"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-user-id-2 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-vehicle-id-2 (core/next-vehicle-id conn)
+            new-vehicle-id-3 (core/next-vehicle-id conn)
+            new-vehicle-id-4 (core/next-vehicle-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        (usercore/save-new-user conn
+                                new-user-id-2
+                                {:user/username "evansp"
+                                 :user/email "paul@test.com"
+                                 :user/name "Paul Evans"
+                                 :user/password "insecure2"})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.3})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-2
+                               {:fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
+        (core/save-new-vehicle conn
+                               new-user-id-2
+                               new-vehicle-id-3
+                               {:fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.3})
+        (core/save-new-vehicle conn
+                               new-user-id-2
+                               new-vehicle-id-4
+                               {:fpvehicle/name "300Z"
+                                :fpvehicle/default-octane 93})
+        (testing "Try to update an existing vehicle by giving it a name that is already taken"
+          (try
+            (core/save-vehicle conn
+                               new-vehicle-id-1 ; is currently "Jeep"
+                               {:fpvehicle/name "300Z"})
+            (is false "Should not have reached this")
+            (catch IllegalArgumentException e
+              (let [msg-mask (Long/parseLong (.getMessage e))]
+                (is (pos? (bit-and msg-mask val/sv-any-issues)))
+                (is (zero? (bit-and msg-mask val/sv-name-not-provided)))
+                (is (pos? (bit-and msg-mask val/sv-vehicle-already-exists)))))))))))

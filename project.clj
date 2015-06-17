@@ -8,7 +8,7 @@
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/tools.logging "0.3.1"]
                  [org.clojure/data.codec "0.1.0"]
-                 [pe-jdbc-utils "0.0.2"]
+                 [pe-jdbc-utils "0.0.4"]
                  [pe-core-utils "0.0.11"]
                  [pe-user-core "0.1.12"]
                  [ch.qos.logback/logback-classic "1.0.13"]
@@ -19,7 +19,7 @@
                  [com.cemerick/friend "0.2.1"]]
   :resource-paths ["resources"]
   :codox {:exclude [user]
-          :src-dir-uri "https://github.com/evanspa/pe-fp-core/blob/0.0.9/"
+          :src-dir-uri "https://github.com/evanspa/pe-fp-core/blob/0.0.10/"
           :src-linenum-anchor-prefix "L"}
   :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-loaded
                    :plugins [[cider/cider-nrepl "0.9.0-SNAPSHOT"]]

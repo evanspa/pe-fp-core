@@ -66,9 +66,11 @@
 (def sv-vehicle-already-exists (bit-shift-left 1 2)) ; for POST
 
 (defn save-vehicle-validation-mask
-  [{name :fpvehicle/name}]
+  [{name :fpvehicle/name
+    :as vehicle}]
   (-> 0
-      (ucore/add-condition #(empty? name)
+      (ucore/add-condition #(and (contains? vehicle :fpvehicle/name)
+                                 (empty? name))
                            sv-name-not-provided
                            sv-any-issues)))
 

@@ -287,7 +287,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defn save-new-vehicle
   [db-spec user-id new-vehicle-id vehicle]
-  (let [validation-mask (val/save-vehicle-validation-mask vehicle)]
+  (let [validation-mask (val/create-vehicle-validation-mask vehicle)]
     (if (pos? (bit-and validation-mask val/sv-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
       (let [created-at (t/now)
@@ -318,18 +318,31 @@
 
 (defn save-vehicle
   [db-spec vehicle-id vehicle]
-  (let [updated-at (t/now)
-        updated-at-sql (c/to-timestamp updated-at)]
-    (j/update! db-spec
-               :vehicle
-               (-> {:updated_at updated-at-sql}
-                   (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
-                   (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
-                   (ucore/assoc-if-contains vehicle :fpvehicle/fuel-capacity  :fuel_capacity)
-                   (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
-               ["id = ?" vehicle-id])
-    (-> vehicle
-        (assoc :fpvehicle/updated-at updated-at))))
+  (let [validation-mask (val/save-vehicle-validation-mask vehicle)]
+    (if (pos? (bit-and validation-mask val/sv-any-issues))
+      (throw (IllegalArgumentException. (str validation-mask)))
+      (let [updated-at (t/now)
+            updated-at-sql (c/to-timestamp updated-at)]
+        (try
+          (j/update! db-spec
+                     :vehicle
+                     (-> {:updated_at updated-at-sql}
+                         (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
+                         (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
+                         (ucore/assoc-if-contains vehicle :fpvehicle/fuel-capacity  :fuel_capacity)
+                         (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
+                     ["id = ?" vehicle-id])
+          (-> vehicle
+              (assoc :fpvehicle/updated-at updated-at))
+          (catch java.sql.SQLException e
+            (if (jcore/uniq-constraint-violated? db-spec e)
+              (let [ucv (jcore/uniq-constraint-violated db-spec e)]
+                (if (= ucv fpddl/constr-vehicle-uniq-name)
+                  (throw (IllegalArgumentException. (str (bit-or 0
+                                                                 val/sv-vehicle-already-exists
+                                                                 val/sv-any-issues))))
+                  (throw e)))
+              (throw e))))))))
 
 (defn vehicles-for-user
   [db-spec user-id]

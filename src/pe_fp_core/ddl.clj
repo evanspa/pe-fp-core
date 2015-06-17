@@ -61,6 +61,16 @@
 (def v1-vehicle-add-fuel-capacity-col
   (format "ALTER TABLE %s ADD COLUMN fuel_capacity numeric NULL", tbl-vehicle))
 
+(def v2-vehicle-drop-erroneous-unique-name-constraint
+  (format "ALTER TABLE %s DROP CONSTRAINT %s"
+          tbl-vehicle
+          constr-vehicle-uniq-name))
+
+(def v2-vehicle-add-proper-unique-name-constraint
+  (format "ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (user_id, name)"
+          tbl-vehicle
+          constr-vehicle-uniq-name))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuelstation table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
