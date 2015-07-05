@@ -33,13 +33,16 @@
       (ucore/add-condition #(nil? purchase-date)
                            sfplog-purchased-at-not-provided
                            sfplog-any-issues)
-      (ucore/add-condition #(< num-gallons 0)
+      (ucore/add-condition #(and (not (nil? num-gallons))
+                                 (< num-gallons 0))
                            sfplog-num-gallons-negative
                            sfplog-any-issues)
-      (ucore/add-condition #(< octane 0)
+      (ucore/add-condition #(and (not (nil? octane))
+                                 (< octane 0))
                            sfplog-octane-negative
                            sfplog-any-issues)
-      (ucore/add-condition #(< gallon-price 0)
+      (ucore/add-condition #(and (not (nil? gallon-price))
+                                 (< gallon-price 0))
                            sfplog-gallon-price-negative
                            sfplog-any-issues)))
 
@@ -68,7 +71,8 @@
       (ucore/add-condition #(nil? logged-at)
                            senvlog-logged-at-not-provided
                            senvlog-any-issues)
-      (ucore/add-condition #(< odometer 0)
+      (ucore/add-condition #(and (not (nil? odometer))
+                                 (< odometer 0))
                            senvlog-odometer-negative
                            senvlog-any-issues)))
 
