@@ -51,7 +51,6 @@
 (def senvlog-odometer-not-provided     (bit-shift-left 1 2))
 (def senvlog-outside-temp-not-provided (bit-shift-left 1 3))
 (def senvlog-odometer-negative         (bit-shift-left 1 4))
-(def senvlog-outside-temp-negative     (bit-shift-left 1 5))
 
 (defn save-envlog-validation-mask [envlog] 0)
 
@@ -71,9 +70,6 @@
                            senvlog-any-issues)
       (ucore/add-condition #(< odometer 0)
                            senvlog-odometer-negative
-                           senvlog-any-issues)
-      (ucore/add-condition #(< outside-temp 0)
-                           senvlog-outside-temp-negative
                            senvlog-any-issues)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
