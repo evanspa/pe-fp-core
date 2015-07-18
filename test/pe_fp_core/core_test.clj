@@ -82,7 +82,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-#_(deftest FuelPurchaseLogs
+(deftest FuelPurchaseLogs
   (testing "Saving (and then loading) fuel purchase logs"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)
@@ -190,7 +190,7 @@
             (is (= 2.41M (:fplog/gallon-price fplog)))
             (is (= 89 (:fplog/octane fplog)))))))))
 
-#_(deftest EnvironmentLogs
+(deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)
@@ -270,7 +270,7 @@
             (is (= 21999M (:envlog/odometer envlog)))
             (is (= 532.4M (:envlog/dte envlog)))))))))
 
-#_(deftest Fuelstation
+(deftest Fuelstation
   (testing "Saving (and then loading) fuelstation"
     (j/with-db-transaction [conn db-spec]
       (let [new-user-id-1 (usercore/next-user-account-id conn)

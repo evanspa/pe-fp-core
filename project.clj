@@ -10,7 +10,7 @@
                  [org.clojure/data.codec "0.1.0"]
                  [pe-jdbc-utils "0.0.4"]
                  [pe-core-utils "0.0.11"]
-                 [pe-user-core "0.1.12"]
+                 [pe-user-core "0.1.17"]
                  [ch.qos.logback/logback-classic "1.0.13"]
                  [org.slf4j/slf4j-api "1.7.5"]
                  [clj-time "0.8.0"]
@@ -22,7 +22,7 @@
           :src-dir-uri "https://github.com/evanspa/pe-fp-core/blob/0.0.14/"
           :src-linenum-anchor-prefix "L"}
   :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-loaded
-                   :plugins [[cider/cider-nrepl "0.9.0-SNAPSHOT"]]
+                   :plugins [[cider/cider-nrepl "0.10.0-SNAPSHOT"]]
                    :dependencies [[org.clojure/tools.namespace "0.2.7"]
                                   [org.clojure/java.classpath "0.2.2"]
                                   [org.clojure/tools.nrepl "0.2.7"]

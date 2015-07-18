@@ -3,6 +3,7 @@
             [clojure.tools.logging :as log]
             [pe-jdbc-utils.core :as jcore]
             [clojure.java.jdbc :as j]
+            [pe-user-core.core :as usercore]
             [pe-fp-core.ddl :as fpddl]
             [pe-core-utils.core :as ucore]
             [clj-time.core :as t]
@@ -100,8 +101,19 @@
                     [(format "select * from %s where id = ?" table)
                      entity-id]
                     :result-set-fn first)]
-    (when rs
-      (rs->entity-fn rs))))
+    (when rs (rs->entity-fn rs))))
+
+(declare vehicle-by-id)
+(declare fuelstation-by-id)
+
+(defn compute-deps-not-found-mask
+  [any-issues-mask & loaded-entity-not-exist-mask-pairs]
+  (reduce (fn [mask [loaded-entity-result dep-not-exist-mask]]
+            (if (nil? loaded-entity-result)
+              (bit-or mask dep-not-exist-mask any-issues-mask)
+              mask))
+          0
+          loaded-entity-not-exist-mask-pairs))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log-related definitions.
@@ -111,46 +123,61 @@
   (let [validation-mask (val/save-fplog-validation-mask fplog)]
     (if (pos? (bit-and validation-mask val/sfplog-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (t/now)
-            created-at-sql (c/to-timestamp created-at)]
-        (j/insert! db-spec
-                   :fplog
-                   {:user_id                   user-id
-                    :vehicle_id                vehicle-id
-                    :fuelstation_id            fuelstation-id
-                    :id                        new-fplog-id
-                    :purchased_at              (c/to-timestamp (:fplog/purchased-at fplog))
-                    :got_car_wash              (:fplog/got-car-wash fplog)
-                    :car_wash_per_gal_discount (:fplog/car-wash-per-gal-discount fplog)
-                    :num_gallons               (:fplog/num-gallons fplog)
-                    :octane                    (:fplog/octane fplog)
-                    :gallon_price              (:fplog/gallon-price fplog)
-                    :created_at                created-at-sql
-                    :updated_at                created-at-sql
-                    :updated_count             1})
-        (-> fplog
-            (assoc :fplog/created-at created-at)
-            (assoc :fplog/updated-at created-at))))))
+      (let [deps-not-found-mask (compute-deps-not-found-mask val/sfplog-any-issues
+                                                             [[(usercore/load-user-by-id db-spec user-id) val/sfplog-user-does-not-exist]
+                                                              [(vehicle-by-id db-spec vehicle-id) val/sfplog-vehicle-does-not-exist]
+                                                              [(fuelstation-by-id db-spec fuelstation-id) val/sfplog-fuelstation-does-not-exist]])]
+        (if (not= 0 deps-not-found-mask)
+          (throw (IllegalArgumentException. (str deps-not-found-mask)))
+          (let [created-at (t/now)
+                created-at-sql (c/to-timestamp created-at)]
+            (j/insert! db-spec
+                       :fplog
+                       {:user_id                   user-id
+                        :vehicle_id                vehicle-id
+                        :fuelstation_id            fuelstation-id
+                        :id                        new-fplog-id
+                        :purchased_at              (c/to-timestamp (:fplog/purchased-at fplog))
+                        :got_car_wash              (:fplog/got-car-wash fplog)
+                        :car_wash_per_gal_discount (:fplog/car-wash-per-gal-discount fplog)
+                        :num_gallons               (:fplog/num-gallons fplog)
+                        :octane                    (:fplog/octane fplog)
+                        :gallon_price              (:fplog/gallon-price fplog)
+                        :created_at                created-at-sql
+                        :updated_at                created-at-sql
+                        :updated_count             1})
+            (-> fplog
+                (assoc :fplog/created-at created-at)
+                (assoc :fplog/updated-at created-at))))))))
 
 (defn save-fplog
   [db-spec fplog-id fplog]
-  (let [updated-at (t/now)
-        updated-at-sql (c/to-timestamp updated-at)]
-    (j/update! db-spec
-               :fplog
-               (-> {:updated_at updated-at-sql}
-                   (ucore/assoc-if-contains fplog :fplog/user-id                   :user_id)
-                   (ucore/assoc-if-contains fplog :fplog/vehicle-id                :vehicle_id)
-                   (ucore/assoc-if-contains fplog :fplog/fuelstation-id            :fuelstation_id)
-                   (ucore/assoc-if-contains fplog :fplog/purchased-at              :purchased_at c/to-timestamp)
-                   (ucore/assoc-if-contains fplog :fplog/got-car-wash              :got_car_wash)
-                   (ucore/assoc-if-contains fplog :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
-                   (ucore/assoc-if-contains fplog :fplog/num-gallons               :num_gallons)
-                   (ucore/assoc-if-contains fplog :fplog/octane                    :octane)
-                   (ucore/assoc-if-contains fplog :fplog/gallon-price              :gallon_price))
-               ["id = ?" fplog-id])
-    (-> fplog
-        (assoc :fplog/updated-at updated-at))))
+  (let [user-id (:fplog/user-id fplog)
+        vehicle-id (:fplog/vehicle-id fplog)
+        fuelstation-id (:fplog/fuelstation-id fplog)
+        deps-not-found-mask (compute-deps-not-found-mask val/sfplog-any-issues
+                                                         [[(usercore/load-user-by-id db-spec user-id) val/sfplog-user-does-not-exist]
+                                                          [(vehicle-by-id db-spec vehicle-id) val/sfplog-vehicle-does-not-exist]
+                                                          [(fuelstation-by-id db-spec fuelstation-id) val/sfplog-fuelstation-does-not-exist]])]
+    (if (not= 0 deps-not-found-mask)
+      (throw (IllegalArgumentException. (str deps-not-found-mask)))
+      (let [updated-at (t/now)
+            updated-at-sql (c/to-timestamp updated-at)]
+        (j/update! db-spec
+                   :fplog
+                   (-> {:updated_at updated-at-sql}
+                       (ucore/assoc-if-contains fplog :fplog/user-id                   :user_id)
+                       (ucore/assoc-if-contains fplog :fplog/vehicle-id                :vehicle_id)
+                       (ucore/assoc-if-contains fplog :fplog/fuelstation-id            :fuelstation_id)
+                       (ucore/assoc-if-contains fplog :fplog/purchased-at              :purchased_at c/to-timestamp)
+                       (ucore/assoc-if-contains fplog :fplog/got-car-wash              :got_car_wash)
+                       (ucore/assoc-if-contains fplog :fplog/car-wash-per-gal-discount :car_wash_per_gal_discount)
+                       (ucore/assoc-if-contains fplog :fplog/num-gallons               :num_gallons)
+                       (ucore/assoc-if-contains fplog :fplog/octane                    :octane)
+                       (ucore/assoc-if-contains fplog :fplog/gallon-price              :gallon_price))
+                   ["id = ?" fplog-id])
+        (-> fplog
+            (assoc :fplog/updated-at updated-at))))))
 
 (defn fplogs-for-user
   [db-spec user-id]
@@ -172,44 +199,56 @@
   (let [validation-mask (val/save-envlog-validation-mask envlog)]
     (if (pos? (bit-and validation-mask val/senvlog-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (t/now)
-            created-at-sql (c/to-timestamp created-at)]
-        (j/insert! db-spec
-                   :envlog
-                   {:user_id               user-id
-                    :vehicle_id            vehicle-id
-                    :id                    new-envlog-id
-                    :logged_at             (c/to-timestamp (:envlog/logged-at envlog))
-                    :reported_avg_mpg      (:envlog/reported-avg-mpg envlog)
-                    :reported_avg_mph      (:envlog/reported-avg-mph envlog)
-                    :reported_outside_temp (:envlog/reported-outside-temp envlog)
-                    :odometer              (:envlog/odometer envlog)
-                    :dte                   (:envlog/dte envlog)
-                    :created_at            created-at-sql
-                    :updated_at            created-at-sql
-                    :updated_count         1})
-        (-> envlog
-            (assoc :envlog/created-at created-at)
-            (assoc :envlog/updated-at created-at))))))
+      (let [deps-not-found-mask (compute-deps-not-found-mask val/senvlog-any-issues
+                                                             [[(usercore/load-user-by-id db-spec user-id) val/senvlog-user-does-not-exist]
+                                                              [(vehicle-by-id db-spec vehicle-id) val/senvlog-vehicle-does-not-exist]])]
+        (if (not= 0 deps-not-found-mask)
+          (throw (IllegalArgumentException. (str deps-not-found-mask)))
+          (let [created-at (t/now)
+                created-at-sql (c/to-timestamp created-at)]
+            (j/insert! db-spec
+                       :envlog
+                       {:user_id               user-id
+                        :vehicle_id            vehicle-id
+                        :id                    new-envlog-id
+                        :logged_at             (c/to-timestamp (:envlog/logged-at envlog))
+                        :reported_avg_mpg      (:envlog/reported-avg-mpg envlog)
+                        :reported_avg_mph      (:envlog/reported-avg-mph envlog)
+                        :reported_outside_temp (:envlog/reported-outside-temp envlog)
+                        :odometer              (:envlog/odometer envlog)
+                        :dte                   (:envlog/dte envlog)
+                        :created_at            created-at-sql
+                        :updated_at            created-at-sql
+                        :updated_count         1})
+            (-> envlog
+                (assoc :envlog/created-at created-at)
+                (assoc :envlog/updated-at created-at))))))))
 
 (defn save-envlog
   [db-spec envlog-id envlog]
-  (let [updated-at (t/now)
-        updated-at-sql (c/to-timestamp updated-at)]
-    (j/update! db-spec
-               :envlog
-               (-> {:updated_at updated-at-sql}
-                   (ucore/assoc-if-contains envlog :envlog/user-id               :user_id)
-                   (ucore/assoc-if-contains envlog :envlog/vehicle-id            :vehicle_id)
-                   (ucore/assoc-if-contains envlog :envlog/logged-at             :logged_at c/to-timestamp)
-                   (ucore/assoc-if-contains envlog :envlog/reported-avg-mpg      :reported_avg_mpg)
-                   (ucore/assoc-if-contains envlog :envlog/reported-avg-mph      :reported_avg_mph)
-                   (ucore/assoc-if-contains envlog :envlog/reported-outside-temp :reported_outside_temp)
-                   (ucore/assoc-if-contains envlog :envlog/odometer              :odometer)
-                   (ucore/assoc-if-contains envlog :envlog/dte                   :dte))
-               ["id = ?" envlog-id])
-    (-> envlog
-        (assoc :envlog/updated-at updated-at))))
+  (let [user-id (:envlog/user-id envlog)
+        vehicle-id (:envlog/vehicle-id envlog)
+        deps-not-found-mask (compute-deps-not-found-mask val/senvlog-any-issues
+                                                         [[(usercore/load-user-by-id db-spec user-id) val/senvlog-user-does-not-exist]
+                                                          [(vehicle-by-id db-spec vehicle-id) val/senvlog-vehicle-does-not-exist]])]
+    (if (not= 0 deps-not-found-mask)
+      (throw (IllegalArgumentException. (str deps-not-found-mask)))
+      (let [updated-at (t/now)
+            updated-at-sql (c/to-timestamp updated-at)]
+        (j/update! db-spec
+                   :envlog
+                   (-> {:updated_at updated-at-sql}
+                       (ucore/assoc-if-contains envlog :envlog/user-id               :user_id)
+                       (ucore/assoc-if-contains envlog :envlog/vehicle-id            :vehicle_id)
+                       (ucore/assoc-if-contains envlog :envlog/logged-at             :logged_at c/to-timestamp)
+                       (ucore/assoc-if-contains envlog :envlog/reported-avg-mpg      :reported_avg_mpg)
+                       (ucore/assoc-if-contains envlog :envlog/reported-avg-mph      :reported_avg_mph)
+                       (ucore/assoc-if-contains envlog :envlog/reported-outside-temp :reported_outside_temp)
+                       (ucore/assoc-if-contains envlog :envlog/odometer              :odometer)
+                       (ucore/assoc-if-contains envlog :envlog/dte                   :dte))
+                   ["id = ?" envlog-id])
+        (-> envlog
+            (assoc :envlog/updated-at updated-at))))))
 
 (defn envlogs-for-user
   [db-spec user-id]
@@ -231,44 +270,53 @@
   (let [validation-mask (val/save-fuelstation-validation-mask fuelstation)]
     (if (pos? (bit-and validation-mask val/sfs-any-issues))
       (throw (IllegalArgumentException. (str validation-mask)))
-      (let [created-at (t/now)
-            created-at-sql (c/to-timestamp created-at)]
-        (j/insert! db-spec
-                   :fuelstation
-                   {:user_id       user-id
-                    :id            new-fuelstation-id
-                    :name          (:fpfuelstation/name fuelstation)
-                    :street        (:fpfuelstation/street fuelstation)
-                    :city          (:fpfuelstation/city fuelstation)
-                    :state         (:fpfuelstation/state fuelstation)
-                    :zip           (:fpfuelstation/zip fuelstation)
-                    :latitude      (:fpfuelstation/latitude fuelstation)
-                    :longitude     (:fpfuelstation/longitude fuelstation)
-                    :created_at    created-at-sql
-                    :updated_at    created-at-sql
-                    :updated_count 1})
-        (-> fuelstation
-            (assoc :fpfuelstation/created-at created-at)
-            (assoc :fpfuelstation/updated-at created-at))))))
+      (let [deps-not-found-mask (compute-deps-not-found-mask val/sfs-any-issues
+                                                             [[(usercore/load-user-by-id db-spec user-id) val/sfs-user-does-not-exist]])]
+        (if (not= 0 deps-not-found-mask)
+          (throw (IllegalArgumentException. (str deps-not-found-mask)))
+          (let [created-at (t/now)
+                created-at-sql (c/to-timestamp created-at)]
+            (j/insert! db-spec
+                       :fuelstation
+                       {:user_id       user-id
+                        :id            new-fuelstation-id
+                        :name          (:fpfuelstation/name fuelstation)
+                        :street        (:fpfuelstation/street fuelstation)
+                        :city          (:fpfuelstation/city fuelstation)
+                        :state         (:fpfuelstation/state fuelstation)
+                        :zip           (:fpfuelstation/zip fuelstation)
+                        :latitude      (:fpfuelstation/latitude fuelstation)
+                        :longitude     (:fpfuelstation/longitude fuelstation)
+                        :created_at    created-at-sql
+                        :updated_at    created-at-sql
+                        :updated_count 1})
+            (-> fuelstation
+                (assoc :fpfuelstation/created-at created-at)
+                (assoc :fpfuelstation/updated-at created-at))))))))
 
 (defn save-fuelstation
   [db-spec fuelstation-id fuelstation]
-  (let [updated-at (t/now)
-        updated-at-sql (c/to-timestamp updated-at)]
-    (j/update! db-spec
-               :fuelstation
-               (-> {:updated_at updated-at-sql}
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/user-id   :user_id)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/name      :name)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/street    :street)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/city      :city)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/state     :state)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/zip       :zip)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/latitude  :latitude)
-                   (ucore/assoc-if-contains fuelstation :fpfuelstation/longitude :longitude))
-               ["id = ?" fuelstation-id])
-    (-> fuelstation
-        (assoc :fpfuelstation/updated-at updated-at))))
+  (let [user-id (:fpfuelstation/user-id fuelstation)
+        deps-not-found-mask (compute-deps-not-found-mask val/sfs-any-issues
+                                                         [[(usercore/load-user-by-id db-spec user-id) val/sfs-user-does-not-exist]])]
+    (if (not= 0 deps-not-found-mask)
+      (throw (IllegalArgumentException. (str deps-not-found-mask)))
+      (let [updated-at (t/now)
+            updated-at-sql (c/to-timestamp updated-at)]
+        (j/update! db-spec
+                   :fuelstation
+                   (-> {:updated_at updated-at-sql}
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/user-id   :user_id)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/name      :name)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/street    :street)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/city      :city)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/state     :state)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/zip       :zip)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/latitude  :latitude)
+                       (ucore/assoc-if-contains fuelstation :fpfuelstation/longitude :longitude))
+                   ["id = ?" fuelstation-id])
+        (-> fuelstation
+            (assoc :fpfuelstation/updated-at updated-at))))))
 
 (defn fuelstations-for-user
   [db-spec user-id]
@@ -292,31 +340,35 @@
       (throw (IllegalArgumentException. (str validation-mask)))
       (if (.contains (:fpvehicle/name vehicle) "500err")
         (throw (RuntimeException.))
-        (let [created-at (t/now)
-            created-at-sql (c/to-timestamp created-at)]
-          (try
-            (j/insert! db-spec
-                       :vehicle
-                       {:user_id        user-id
-                        :id             new-vehicle-id
-                        :name           (:fpvehicle/name vehicle)
-                        :default_octane (:fpvehicle/default-octane vehicle)
-                        :fuel_capacity  (:fpvehicle/fuel-capacity vehicle)
-                        :created_at     created-at-sql
-                        :updated_at     created-at-sql
-                        :updated_count  1})
-            (-> vehicle
-                (assoc :fpvehicle/created-at created-at)
-                (assoc :fpvehicle/updated-at created-at))
-            (catch java.sql.SQLException e
-              (if (jcore/uniq-constraint-violated? db-spec e)
-                (let [ucv (jcore/uniq-constraint-violated db-spec e)]
-                  (if (= ucv fpddl/constr-vehicle-uniq-name)
-                    (throw (IllegalArgumentException. (str (bit-or 0
-                                                                   val/sv-vehicle-already-exists
-                                                                   val/sv-any-issues))))
-                    (throw e)))
-                (throw e)))))))))
+        (let [deps-not-found-mask (compute-deps-not-found-mask val/sv-any-issues
+                                                               [[(usercore/load-user-by-id db-spec user-id) val/sv-user-does-not-exist]])]
+          (if (not= 0 deps-not-found-mask)
+            (throw (IllegalArgumentException. (str deps-not-found-mask)))
+            (let [created-at (t/now)
+                  created-at-sql (c/to-timestamp created-at)]
+              (try
+                (j/insert! db-spec
+                           :vehicle
+                           {:user_id        user-id
+                            :id             new-vehicle-id
+                            :name           (:fpvehicle/name vehicle)
+                            :default_octane (:fpvehicle/default-octane vehicle)
+                            :fuel_capacity  (:fpvehicle/fuel-capacity vehicle)
+                            :created_at     created-at-sql
+                            :updated_at     created-at-sql
+                            :updated_count  1})
+                (-> vehicle
+                    (assoc :fpvehicle/created-at created-at)
+                    (assoc :fpvehicle/updated-at created-at))
+                (catch java.sql.SQLException e
+                  (if (jcore/uniq-constraint-violated? db-spec e)
+                    (let [ucv (jcore/uniq-constraint-violated db-spec e)]
+                      (if (= ucv fpddl/constr-vehicle-uniq-name)
+                        (throw (IllegalArgumentException. (str (bit-or 0
+                                                                       val/sv-vehicle-already-exists
+                                                                       val/sv-any-issues))))
+                        (throw e)))
+                    (throw e)))))))))))
 
 (defn save-vehicle
   [db-spec vehicle-id vehicle]
@@ -325,28 +377,40 @@
       (throw (IllegalArgumentException. (str validation-mask)))
       (if (and (not (nil? (:fpvehicle/name vehicle))) (.contains (:fpvehicle/name vehicle) "500err"))
         (throw (RuntimeException.))
-        (let [updated-at (t/now)
-            updated-at-sql (c/to-timestamp updated-at)]
-          (try
-            (j/update! db-spec
-                       :vehicle
-                       (-> {:updated_at updated-at-sql}
-                           (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
-                           (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
-                           (ucore/assoc-if-contains vehicle :fpvehicle/fuel-capacity  :fuel_capacity)
-                           (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
-                       ["id = ?" vehicle-id])
-            (-> vehicle
-                (assoc :fpvehicle/updated-at updated-at))
-            (catch java.sql.SQLException e
-              (if (jcore/uniq-constraint-violated? db-spec e)
-                (let [ucv (jcore/uniq-constraint-violated db-spec e)]
-                  (if (= ucv fpddl/constr-vehicle-uniq-name)
-                    (throw (IllegalArgumentException. (str (bit-or 0
-                                                                   val/sv-vehicle-already-exists
-                                                                   val/sv-any-issues))))
-                    (throw e)))
-                (throw e)))))))))
+        (let [loaded-vehicle-result (vehicle-by-id db-spec vehicle-id)]
+          (if (nil? loaded-vehicle-result)
+            (throw (ex-info nil {:cause :entity-not-found}))
+            (letfn [(do-vehicle-save []
+                      (let [updated-at (t/now)
+                            updated-at-sql (c/to-timestamp updated-at)]
+                        (try
+                          (j/update! db-spec
+                                     :vehicle
+                                     (-> {:updated_at updated-at-sql}
+                                         (ucore/assoc-if-contains vehicle :fpvehicle/user-id        :user_id)
+                                         (ucore/assoc-if-contains vehicle :fpvehicle/default-octane :default_octane)
+                                         (ucore/assoc-if-contains vehicle :fpvehicle/fuel-capacity  :fuel_capacity)
+                                         (ucore/assoc-if-contains vehicle :fpvehicle/name           :name))
+                                     ["id = ?" vehicle-id])
+                          (-> vehicle
+                              (assoc :fpvehicle/updated-at updated-at))
+                          (catch java.sql.SQLException e
+                            (if (jcore/uniq-constraint-violated? db-spec e)
+                              (let [ucv (jcore/uniq-constraint-violated db-spec e)]
+                                (if (= ucv fpddl/constr-vehicle-uniq-name)
+                                  (throw (IllegalArgumentException. (str (bit-or 0
+                                                                                 val/sv-vehicle-already-exists
+                                                                                 val/sv-any-issues))))
+                                  (throw e)))
+                              (throw e))))))]
+              (if (contains? vehicle :fpvehicle/user-id)
+                (let [user-id (:fpvehicle/user-id vehicle)
+                      deps-not-found-mask (compute-deps-not-found-mask val/sv-any-issues
+                                                                       [[(usercore/load-user-by-id db-spec user-id) val/sv-user-does-not-exist]])]
+                  (if (not= 0 deps-not-found-mask)
+                    (throw (IllegalArgumentException. (str deps-not-found-mask)))
+                    (do-vehicle-save)))
+                (do-vehicle-save)))))))))
 
 (defn vehicles-for-user
   [db-spec user-id]
