@@ -539,3 +539,33 @@
                 (is (pos? (bit-and msg-mask val/sv-any-issues)))
                 (is (zero? (bit-and msg-mask val/sv-name-not-provided)))
                 (is (pos? (bit-and msg-mask val/sv-vehicle-already-exists)))))))))))
+
+(deftest Vehicles-Err-Handling-3
+  (testing "Error handling with vehicles, part 3"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        (core/save-new-vehicle conn
+                               new-user-id-1
+                               new-vehicle-id-1
+                               {:fpvehicle/name "Jeep"
+                                :fpvehicle/default-octane 87
+                                :fpvehicle/fuel-capacity 24.3})
+        (testing "Try to update an existing vehicle that has been modified since"
+          (try
+            (core/save-vehicle conn
+                               new-vehicle-id-1
+                               {:fpvehicle/name "300Z"}
+                               (t/minus (t/now) (t/weeks 1)))
+            (is false "Should not have reached this")
+            (catch clojure.lang.ExceptionInfo e
+              (let [type (-> e ex-data :type)
+                    cause (-> e ex-data :cause)]
+                (is (= type :precondition-failed))
+                (is (= cause :unmodified-since-check-failed))))))))))

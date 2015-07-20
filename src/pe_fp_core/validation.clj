@@ -93,9 +93,11 @@
 (def sfs-user-does-not-exist (bit-shift-left 1 2))
 
 (defn save-fuelstation-validation-mask
-  [{name :fpfuelstation/name}]
+  [{name :fpfuelstation/name
+    :as fuelstation}]
   (-> 0
-      (ucore/add-condition #(empty? name)
+      (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/name)
+                                 (empty? name))
                            sfs-name-not-provided
                            sfs-any-issues)))
 
