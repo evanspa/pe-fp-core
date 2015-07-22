@@ -44,19 +44,19 @@
           tbl-vehicle
           constr-vehicle-uniq-name))
 
-(def v0-create-vehicle-updated-count-inc-trigger-function-fn
+(def v0-create-vehicle-updated-count-inc-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger-function db-spec
-                                             tbl-vehicle
-                                             col-updated-count)))
+    (jcore/auto-inc-trigger-fn db-spec
+                               tbl-vehicle
+                               col-updated-count)))
 
 (def v0-create-vehicle-updated-count-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger db-spec
-                                    tbl-vehicle
-                                    col-updated-count
-                                    (jcore/incrementing-trigger-function-name tbl-vehicle
-                                                                              col-updated-count))))
+    (jcore/auto-inc-trigger db-spec
+                            tbl-vehicle
+                            col-updated-count
+                            (jcore/inc-trigger-fn-name tbl-vehicle
+                                                       col-updated-count))))
 
 (def v1-vehicle-add-fuel-capacity-col
   (format "ALTER TABLE %s ADD COLUMN fuel_capacity numeric NULL", tbl-vehicle))
@@ -93,19 +93,19 @@
 (def v0-create-index-on-fuelstation-name
   (format "CREATE INDEX ON %s (name)" tbl-fuelstation))
 
-(def v0-create-fuelstation-updated-count-inc-trigger-function-fn
+(def v0-create-fuelstation-updated-count-inc-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger-function db-spec
-                                             tbl-fuelstation
-                                             col-updated-count)))
+    (jcore/auto-inc-trigger-fn db-spec
+                               tbl-fuelstation
+                               col-updated-count)))
 
 (def v0-create-fuelstation-updated-count-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger db-spec
-                                    tbl-fuelstation
-                                    col-updated-count
-                                    (jcore/incrementing-trigger-function-name tbl-fuelstation
-                                                                              col-updated-count))))
+    (jcore/auto-inc-trigger db-spec
+                            tbl-fuelstation
+                            col-updated-count
+                            (jcore/inc-trigger-fn-name tbl-fuelstation
+                                                       col-updated-count))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log table, constraints and triggers
@@ -127,19 +127,19 @@
        (format "%s                integer     NOT NULL, " col-updated-count)
        "deleted_at                timestamptz NULL)"))
 
-(def v0-create-fplog-updated-count-inc-trigger-function-fn
+(def v0-create-fplog-updated-count-inc-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger-function db-spec
-                                             tbl-fplog
-                                             col-updated-count)))
+    (jcore/auto-inc-trigger-fn db-spec
+                               tbl-fplog
+                               col-updated-count)))
 
 (def v0-create-fplog-updated-count-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger db-spec
-                                    tbl-fplog
-                                    col-updated-count
-                                    (jcore/incrementing-trigger-function-name tbl-fplog
-                                                                              col-updated-count))))
+    (jcore/auto-inc-trigger db-spec
+                            tbl-fplog
+                            col-updated-count
+                            (jcore/inc-trigger-fn-name tbl-fplog
+                                                       col-updated-count))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment log table, constraints and triggers
@@ -160,16 +160,16 @@
        (format "%s                integer     NOT NULL, " col-updated-count)
        "deleted_at                timestamptz NULL)"))
 
-(def v0-create-envlog-updated-count-inc-trigger-function-fn
+(def v0-create-envlog-updated-count-inc-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger-function db-spec
-                                             tbl-envlog
-                                             col-updated-count)))
+    (jcore/auto-inc-trigger-fn db-spec
+                               tbl-envlog
+                               col-updated-count)))
 
 (def v0-create-envlog-updated-count-trigger-fn
   (fn [db-spec]
-    (jcore/auto-incremented-trigger db-spec
-                                    tbl-envlog
-                                    col-updated-count
-                                    (jcore/incrementing-trigger-function-name tbl-envlog
-                                                                              col-updated-count))))
+    (jcore/auto-inc-trigger db-spec
+                            tbl-envlog
+                            col-updated-count
+                            (jcore/inc-trigger-fn-name tbl-envlog
+                                                       col-updated-count))))

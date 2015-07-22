@@ -31,11 +31,19 @@
                                         uddl/v0-create-user-account-ddl
                                         uddl/v0-add-unique-constraint-user-account-email
                                         uddl/v0-add-unique-constraint-user-account-username
-                                        uddl/v0-create-authentication-token-ddl)
+                                        uddl/v0-create-authentication-token-ddl
+                                        uddl/v1-user-add-deleted-reason-col
+                                        uddl/v1-user-add-suspended-at-col
+                                        uddl/v1-user-add-suspended-reason-col
+                                        uddl/v1-user-add-suspended-count-col)
                       (jcore/with-try-catch-exec-as-query db-spec
-                        (uddl/v0-create-updated-count-inc-trigger-function-fn db-spec))
+                        (uddl/v0-create-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (uddl/v0-create-user-account-updated-count-trigger-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (uddl/v1-create-suspended-count-inc-trigger-fn db-spec))
+                      (jcore/with-try-catch-exec-as-query db-spec
+                        (uddl/v1-create-user-account-suspended-count-trigger-fn db-spec))
 
                       ;; Vehicle setup
                       (j/db-do-commands db-spec
@@ -46,7 +54,7 @@
                                         fpddl/v2-vehicle-drop-erroneous-unique-name-constraint
                                         fpddl/v2-vehicle-add-proper-unique-name-constraint)
                       (jcore/with-try-catch-exec-as-query db-spec
-                        (fpddl/v0-create-vehicle-updated-count-inc-trigger-function-fn db-spec))
+                        (fpddl/v0-create-vehicle-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-trigger-fn db-spec))
 
@@ -56,7 +64,7 @@
                                         fpddl/v0-create-fuelstation-ddl
                                         fpddl/v0-create-index-on-fuelstation-name)
                       (jcore/with-try-catch-exec-as-query db-spec
-                        (fpddl/v0-create-fuelstation-updated-count-inc-trigger-function-fn db-spec))
+                        (fpddl/v0-create-fuelstation-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec))
 
@@ -65,7 +73,7 @@
                                         true
                                         fpddl/v0-create-fplog-ddl)
                       (jcore/with-try-catch-exec-as-query db-spec
-                        (fpddl/v0-create-fplog-updated-count-inc-trigger-function-fn db-spec))
+                        (fpddl/v0-create-fplog-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fplog-updated-count-trigger-fn db-spec))
 
@@ -74,7 +82,7 @@
                                         true
                                         fpddl/v0-create-envlog-ddl)
                       (jcore/with-try-catch-exec-as-query db-spec
-                        (fpddl/v0-create-envlog-updated-count-inc-trigger-function-fn db-spec))
+                        (fpddl/v0-create-envlog-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-envlog-updated-count-trigger-fn db-spec))
                       (f)))
@@ -163,6 +171,22 @@
             (is (= 0.08M (:fplog/car-wash-per-gal-discount fplog)))
             (is (= 2.39M (:fplog/gallon-price fplog)))
             (is (= 87 (:fplog/octane fplog)))))
+        (let [fplogs (core/fplogs-for-fuelstation conn new-fuelstation-id-1)]
+          (is (= 1 (count fplogs)))
+          (let [[fplog-id fplog] (first fplogs)]
+            (is (= fplog-id new-fplog-id-1))
+            (is (= fplog-id (:fplog/id fplog)))
+            (is (= new-user-id-1 (:fplog/user-id fplog)))
+            (is (= new-vehicle-id-1 (:fplog/vehicle-id fplog)))
+            (is (= new-fuelstation-id-1 (:fplog/fuelstation-id fplog)))
+            (is (not (nil? (:fplog/created-at fplog))))
+            (is (not (nil? (:fplog/updated-at fplog))))
+            (is (= t1 (:fplog/purchased-at fplog)))
+            (is (= true (:fplog/got-car-wash fplog)))
+            (is (= 14.7M (:fplog/num-gallons fplog)))
+            (is (= 0.08M (:fplog/car-wash-per-gal-discount fplog)))
+            (is (= 2.39M (:fplog/gallon-price fplog)))
+            (is (= 87 (:fplog/octane fplog)))))
         (core/save-fplog conn new-fplog-id-1 {:fplog/user-id new-user-id-2
                                               :fplog/vehicle-id new-vehicle-id-2
                                               :fplog/fuelstation-id new-fuelstation-id-2
@@ -188,7 +212,20 @@
             (is (= 14.8M (:fplog/num-gallons fplog)))
             (is (= 0.09M (:fplog/car-wash-per-gal-discount fplog)))
             (is (= 2.41M (:fplog/gallon-price fplog)))
-            (is (= 89 (:fplog/octane fplog)))))))))
+            (is (= 89 (:fplog/octane fplog)))))
+        (let [fplogs (core/fplogs-for-fuelstation conn new-fuelstation-id-2)
+              [fs-id fs] (core/fuelstation-by-id conn new-fuelstation-id-2)]
+          (is (= 1 (count fplogs)))
+          (let [[del-fs-id del-fs :as del-fs-result] (core/mark-fuelstation-as-deleted conn
+                                                                                       new-fuelstation-id-2
+                                                                                       (:fpfuelstation/updated-at fs))]
+            (is (not (nil? del-fs-id)))
+            (is (= del-fs-id new-fuelstation-id-2))
+            (is (not (nil? (:fpfuelstation/deleted-at del-fs))))
+            (is (nil? (core/fuelstation-by-id conn new-fuelstation-id-2)))
+            (is (not (nil? (core/fuelstation-by-id conn new-fuelstation-id-2 false))))
+            (is (empty? (core/fplogs-for-fuelstation conn new-fuelstation-id-2)))
+            (is (= 1 (count (core/fplogs-for-fuelstation conn new-fuelstation-id-2 false))))))))))
 
 (deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
@@ -268,7 +305,25 @@
             (is (= 22.3M (:envlog/reported-avg-mph envlog)))
             (is (= 75.1M (:envlog/reported-outside-temp envlog)))
             (is (= 21999M (:envlog/odometer envlog)))
-            (is (= 532.4M (:envlog/dte envlog)))))))))
+            (is (= 532.4M (:envlog/dte envlog)))))
+        (let [envlogs (core/envlogs-for-vehicle conn new-vehicle-id-2)]
+          (is (= 1 (count envlogs)))
+          (let [[envlog-id envlog] (first envlogs)]
+            (is (= envlog-id new-envlog-id-1))
+            (is (= envlog-id (:envlog/id envlog)))
+            (is (= new-user-id-2 (:envlog/user-id envlog)))
+            (is (= new-vehicle-id-2 (:envlog/vehicle-id envlog)))
+            (is (= t1 (:envlog/logged-at envlog)))
+            (is (= 23.5M (:envlog/reported-avg-mpg envlog)))
+            (is (= 22.3M (:envlog/reported-avg-mph envlog)))
+            (is (= 75.1M (:envlog/reported-outside-temp envlog)))
+            (is (= 21999M (:envlog/odometer envlog)))
+            (is (= 532.4M (:envlog/dte envlog))))
+          (let [[veh-id veh] (core/vehicle-by-id conn new-vehicle-id-2)
+                [del-veh-id del-veh] (core/mark-vehicle-as-deleted conn new-vehicle-id-2 (:fpvehicle/updated-at veh))]
+            (is (not (nil? del-veh)))
+            (is (empty? (core/envlogs-for-vehicle conn new-vehicle-id-2)))
+            (is (= 1 (count (core/envlogs-for-vehicle conn new-vehicle-id-2 false))))))))))
 
 (deftest Fuelstation
   (testing "Saving (and then loading) fuelstation"
@@ -388,8 +443,6 @@
                                 :fpvehicle/default-octane 93})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
-        (is (= 1 (count (core/vehicles-for-user-by-name conn new-user-id-1 "Jeep"))))
-        (is (= 1 (count (core/vehicles-for-user-by-name conn new-user-id-1 "JEEp"))))
         (core/save-new-vehicle conn
                                new-user-id-2
                                new-vehicle-id-3
