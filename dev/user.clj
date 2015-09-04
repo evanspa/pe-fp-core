@@ -54,7 +54,12 @@
   (j/db-do-commands db-spec-dev
                     true
                     fpddl/v0-create-vehicle-ddl
-                    fpddl/v0-add-unique-constraint-vehicle-name)
+                    fpddl/v0-add-unique-constraint-vehicle-name
+                    fpddl/v1-vehicle-add-fuel-capacity-col
+                    fpddl/v2-vehicle-drop-erroneous-unique-name-constraint
+                    fpddl/v2-vehicle-add-proper-unique-name-constraint
+                    fpddl/v3-vehicle-drop-erroneous-unique-name-constraint-again
+                    fpddl/v3-vehicle-add-proper-unique-name-constraint-take-2)
   (jcore/with-try-catch-exec-as-query db-spec-dev
     (fpddl/v0-create-vehicle-updated-count-inc-trigger-fn db-spec-dev))
   (jcore/with-try-catch-exec-as-query db-spec-dev

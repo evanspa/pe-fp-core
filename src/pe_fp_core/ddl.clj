@@ -71,6 +71,16 @@
           tbl-vehicle
           constr-vehicle-uniq-name))
 
+(def v3-vehicle-drop-erroneous-unique-name-constraint-again
+  (format "ALTER TABLE %s DROP CONSTRAINT %s"
+          tbl-vehicle
+          constr-vehicle-uniq-name))
+
+(def v3-vehicle-add-proper-unique-name-constraint-take-2
+  (format "CREATE UNIQUE INDEX %s ON %s (user_id, name) WHERE deleted_at IS NULL"
+          constr-vehicle-uniq-name
+          tbl-vehicle))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuelstation table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

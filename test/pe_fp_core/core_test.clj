@@ -52,7 +52,9 @@
                                         fpddl/v0-add-unique-constraint-vehicle-name
                                         fpddl/v1-vehicle-add-fuel-capacity-col
                                         fpddl/v2-vehicle-drop-erroneous-unique-name-constraint
-                                        fpddl/v2-vehicle-add-proper-unique-name-constraint)
+                                        fpddl/v2-vehicle-add-proper-unique-name-constraint
+                                        fpddl/v3-vehicle-drop-erroneous-unique-name-constraint-again
+                                        fpddl/v3-vehicle-add-proper-unique-name-constraint-take-2)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
@@ -472,7 +474,8 @@
                                 :fpvehicle/fuel-capacity 19.9
                                 :fpvehicle/default-octane 90})
         ; it's okay to use this name because it belongs to user id-1
-        (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/name "Honda Accord"})
+        (core/save-vehicle conn new-vehicle-id-3 {:fpvehicle/name "Honda Accord"
+                                                  :fpvehicle/user-id new-user-id-1})
         (let [[vehicle-id vehicle] (core/vehicle-by-id conn new-vehicle-id-3)]
           (is (not (nil? vehicle)))
           (is (= new-vehicle-id-3 (:fpvehicle/id vehicle)))
@@ -585,7 +588,7 @@
           (try
             (core/save-vehicle conn
                                new-vehicle-id-1 ; is currently "Jeep"
-                               {:fpvehicle/name "300Z"})
+                               {:fpvehicle/name "300Z" :fpvehicle/user-id new-user-id-1})
             (is false "Should not have reached this")
             (catch IllegalArgumentException e
               (let [msg-mask (Long/parseLong (.getMessage e))]
@@ -614,7 +617,7 @@
           (try
             (core/save-vehicle conn
                                new-vehicle-id-1
-                               {:fpvehicle/name "300Z"}
+                               {:fpvehicle/name "300Z" :fpvehicle/user-id new-user-id-1}
                                (t/minus (t/now) (t/weeks 1)))
             (is false "Should not have reached this")
             (catch clojure.lang.ExceptionInfo e

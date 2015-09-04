@@ -95,21 +95,6 @@
                        (ucore/replace-if-contains :deleted_at            :envlog/deleted-at from-sql-time-fn)
                        (ucore/replace-if-contains :created_at            :envlog/created-at from-sql-time-fn))])
 
-;; (defn entities-for-user-for-parent
-;;   ([db-spec user-id parent-id table parent-col order-by-col order-by-direction rs->entity-fn]
-;;    (entities-for-user-for-parent db-spec user-id parent-id table parent-col order-by-col order-by-direction rs->entity-fn true))
-;;   ([db-spec user-id parent-id table parent-col order-by-col order-by-direction rs->entity-fn active-only]
-;;    (j/query db-spec
-;;             [(format "select * from %s where user_id = ? and %s = ?%s order by %s %s"
-;;                      table
-;;                      parent-col
-;;                      (jcore/active-only-where active-only)
-;;                      order-by-col
-;;                      order-by-direction)
-;;              user-id
-;;              parent-id]
-;;             :row-fn rs->entity-fn)))
-
 (declare vehicle-by-id)
 (declare fuelstation-by-id)
 (declare fplog-by-id)
@@ -185,6 +170,21 @@
                                "desc"
                                rs->fplog
                                active-only)))
+
+(defn fplogs-modified-since
+  [db-spec user-id modified-since]
+  (jcore/entities-modified-since db-spec
+                                 fpddl/tbl-fplog
+                                 "user_id"
+                                 "="
+                                 user-id
+                                 "updated_at"
+                                 "deleted_at"
+                                 modified-since
+                                 :fplog/id
+                                 :fplog/deleted-at
+                                 :fplog/updated-at
+                                 rs->fplog))
 
 (defn fplogs-for-fuelstation
   ([db-spec user-id fuelstation-id]
@@ -283,6 +283,21 @@
                                rs->envlog
                                active-only)))
 
+(defn envlogs-modified-since
+  [db-spec user-id modified-since]
+  (jcore/entities-modified-since db-spec
+                                 fpddl/tbl-envlog
+                                 "user_id"
+                                 "="
+                                 user-id
+                                 "updated_at"
+                                 "deleted_at"
+                                 modified-since
+                                 :envlog/id
+                                 :envlog/deleted-at
+                                 :envlog/updated-at
+                                 rs->envlog))
+
 (defn envlog-by-id
   ([db-spec envlog-id]
    (envlog-by-id db-spec envlog-id true))
@@ -364,6 +379,21 @@
                                rs->fuelstation
                                active-only)))
 
+(defn fuelstations-modified-since
+  [db-spec user-id modified-since]
+  (jcore/entities-modified-since db-spec
+                                 fpddl/tbl-fuelstation
+                                 "user_id"
+                                 "="
+                                 user-id
+                                 "updated_at"
+                                 "deleted_at"
+                                 modified-since
+                                 :fpfuelstation/id
+                                 :fpfuelstation/deleted-at
+                                 :fpfuelstation/updated-at
+                                 rs->fuelstation))
+
 (defn fuelstation-by-id
   ([db-spec fuelstation-id]
    (fuelstation-by-id db-spec fuelstation-id true))
@@ -412,6 +442,12 @@
    (vehicle-deps db-spec :fpvehicle/user-id))
   ([db-spec user-id-or-key]
    [[#(usercore/load-user-by-id db-spec %) user-id-or-key val/sv-user-does-not-exist]]))
+
+(defn vehicle-by-id
+  ([db-spec vehicle-id]
+   (vehicle-by-id db-spec vehicle-id true))
+  ([db-spec vehicle-id active-only]
+   (jcore/load-entity-by-col db-spec fpddl/tbl-vehicle "id" "=" vehicle-id rs->vehicle active-only)))
 
 (def vehicle-uniq-constraints
   [[fpddl/constr-vehicle-uniq-name val/sv-vehicle-already-exists]])
@@ -463,6 +499,21 @@
                                rs->vehicle
                                active-only)))
 
+(defn vehicles-modified-since
+  [db-spec user-id modified-since]
+  (jcore/entities-modified-since db-spec
+                                 fpddl/tbl-vehicle
+                                 "user_id"
+                                 "="
+                                 user-id
+                                 "updated_at"
+                                 "deleted_at"
+                                 modified-since
+                                 :fpvehicle/id
+                                 :fpvehicle/deleted-at
+                                 :fpvehicle/updated-at
+                                 rs->vehicle))
+
 (defn fplogs-for-vehicle
   ([db-spec vehicle-id]
    (fplogs-for-vehicle db-spec vehicle-id true))
@@ -490,12 +541,6 @@
                                "desc"
                                rs->envlog
                                active-only)))
-
-(defn vehicle-by-id
-  ([db-spec vehicle-id]
-   (vehicle-by-id db-spec vehicle-id true))
-  ([db-spec vehicle-id active-only]
-   (jcore/load-entity-by-col db-spec fpddl/tbl-vehicle "id" "=" vehicle-id rs->vehicle active-only)))
 
 (defn mark-vehicle-as-deleted
   [db-spec vehicle-id if-unmodified-since]
