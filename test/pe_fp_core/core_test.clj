@@ -218,16 +218,13 @@
         (let [fplogs (core/fplogs-for-fuelstation conn new-fuelstation-id-2)
               [fs-id fs] (core/fuelstation-by-id conn new-fuelstation-id-2)]
           (is (= 1 (count fplogs)))
-          (let [[del-fs-id del-fs :as del-fs-result] (core/mark-fuelstation-as-deleted conn
-                                                                                       new-fuelstation-id-2
-                                                                                       (:fpfuelstation/updated-at fs))]
-            (is (not (nil? del-fs-id)))
-            (is (= del-fs-id new-fuelstation-id-2))
-            (is (not (nil? (:fpfuelstation/deleted-at del-fs))))
-            (is (nil? (core/fuelstation-by-id conn new-fuelstation-id-2)))
-            (is (not (nil? (core/fuelstation-by-id conn new-fuelstation-id-2 false))))
-            (is (empty? (core/fplogs-for-fuelstation conn new-fuelstation-id-2)))
-            (is (= 1 (count (core/fplogs-for-fuelstation conn new-fuelstation-id-2 false))))))))))
+          (core/mark-fuelstation-as-deleted conn
+                                            new-fuelstation-id-2
+                                            (:fpfuelstation/updated-at fs))
+          (is (nil? (core/fuelstation-by-id conn new-fuelstation-id-2)))
+          (is (not (nil? (core/fuelstation-by-id conn new-fuelstation-id-2 false))))
+          (is (empty? (core/fplogs-for-fuelstation conn new-fuelstation-id-2)))
+          (is (= 1 (count (core/fplogs-for-fuelstation conn new-fuelstation-id-2 false)))))))))
 
 (deftest EnvironmentLogs
   (testing "Saving (and then loading) environment logs"
@@ -321,9 +318,8 @@
             (is (= 75.1M (:envlog/reported-outside-temp envlog)))
             (is (= 21999M (:envlog/odometer envlog)))
             (is (= 532.4M (:envlog/dte envlog))))
-          (let [[veh-id veh] (core/vehicle-by-id conn new-vehicle-id-2)
-                [del-veh-id del-veh] (core/mark-vehicle-as-deleted conn new-vehicle-id-2 (:fpvehicle/updated-at veh))]
-            (is (not (nil? del-veh)))
+          (let [[veh-id veh] (core/vehicle-by-id conn new-vehicle-id-2)]
+            (core/mark-vehicle-as-deleted conn new-vehicle-id-2 (:fpvehicle/updated-at veh))
             (is (empty? (core/envlogs-for-vehicle conn new-vehicle-id-2)))
             (is (= 1 (count (core/envlogs-for-vehicle conn new-vehicle-id-2 false))))))))))
 
