@@ -43,7 +43,7 @@ pe-fp-core is available from Clojars.  Add the following dependency to your
 `project.clj` file:
 
 ```
-[pe-fp-core "0.0.19"]
+[pe-fp-core "0.0.20"]
 ```
 
 ## pe-* Clojure Library Suite
