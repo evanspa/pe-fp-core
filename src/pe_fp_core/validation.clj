@@ -57,10 +57,9 @@
 (def senvlog-any-issues                (bit-shift-left 1 0))
 (def senvlog-logged-at-not-provided    (bit-shift-left 1 1))
 (def senvlog-odometer-not-provided     (bit-shift-left 1 2))
-(def senvlog-outside-temp-not-provided (bit-shift-left 1 3))
-(def senvlog-odometer-negative         (bit-shift-left 1 4))
-(def senvlog-user-does-not-exist       (bit-shift-left 1 5))
-(def senvlog-vehicle-does-not-exist    (bit-shift-left 1 6))
+(def senvlog-odometer-negative         (bit-shift-left 1 3))
+(def senvlog-user-does-not-exist       (bit-shift-left 1 4))
+(def senvlog-vehicle-does-not-exist    (bit-shift-left 1 5))
 
 (defn save-envlog-validation-mask
   [envlog]
@@ -73,9 +72,6 @@
   (-> 0
       (ucore/add-condition #(nil? odometer)
                            senvlog-odometer-not-provided
-                           senvlog-any-issues)
-      (ucore/add-condition #(nil? outside-temp)
-                           senvlog-outside-temp-not-provided
                            senvlog-any-issues)
       (ucore/add-condition #(nil? logged-at)
                            senvlog-logged-at-not-provided
