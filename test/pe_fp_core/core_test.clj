@@ -159,7 +159,8 @@
                               :fplog/car-wash-per-gal-discount 0.08
                               :fplog/num-gallons 14.7
                               :fplog/gallon-price 2.39
-                              :fplog/octane 87})
+                              :fplog/octane 87
+                              :fplog/odometer 15803})
         (let [fplogs (core/fplogs-for-user conn new-user-id-1)]
           (is (= 1 (count fplogs)))
           (let [[fplog-id fplog] (first fplogs)]
@@ -175,7 +176,8 @@
             (is (= 14.7M (:fplog/num-gallons fplog)))
             (is (= 0.08M (:fplog/car-wash-per-gal-discount fplog)))
             (is (= 2.39M (:fplog/gallon-price fplog)))
-            (is (= 87 (:fplog/octane fplog)))))
+            (is (= 87 (:fplog/octane fplog)))
+            (is (= 15803M (:fplog/odometer fplog)))))
         (let [fplogs (core/fplogs-for-fuelstation conn new-fuelstation-id-1)]
           (is (= 1 (count fplogs)))
           (let [[fplog-id fplog] (first fplogs)]
