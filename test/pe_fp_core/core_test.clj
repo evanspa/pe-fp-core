@@ -75,7 +75,8 @@
                       ;; Fuel purchase log setup
                       (j/db-do-commands db-spec
                                         true
-                                        fpddl/v0-create-fplog-ddl)
+                                        fpddl/v0-create-fplog-ddl
+                                        fpddl/v4-fplog-add-odometer-col)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fplog-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec

@@ -72,6 +72,7 @@
                       (ucore/replace-if-contains :car_wash_per_gal_discount :fplog/car-wash-per-gal-discount)
                       (ucore/replace-if-contains :num_gallons               :fplog/num-gallons)
                       (ucore/replace-if-contains :octane                    :fplog/octane)
+                      (ucore/replace-if-contains :odometer                  :fplog/odometer)
                       (ucore/replace-if-contains :gallon_price              :fplog/gallon-price)
                       (ucore/replace-if-contains :updated_count             :fplog/updated-count)
                       (ucore/replace-if-contains :updated_at                :fplog/updated-at from-sql-time-fn)
@@ -112,6 +113,7 @@
    [:fplog/car-wash-per-gal-discount :car_wash_per_gal_discount]
    [:fplog/num-gallons               :num_gallons]
    [:fplog/octane                    :octane]
+   [:fplog/odometer                  :odometer]
    [:fplog/gallon-price              :gallon_price]])
 
 (defn fplog-deps
