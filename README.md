@@ -3,14 +3,14 @@
 [![Build Status](https://travis-ci.org/evanspa/pe-fp-core.svg)](https://travis-ci.org/evanspa/pe-fp-core)
 
 A Clojure library encapsulating the server-side core logic, model and data
-access functionality of the fuel purchase system.  pe-fp-core leverages
+access functionality of the Gas Jot system.  pe-fp-core leverages
 PostgreSQL as the underlying backend.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**
 
-- [About the Fuel Purchase System](#about-the-fuel-purchase-system)
+- [About the Gas Jot System](#about-the-gas-jot-system)
   - [Client Applications](#client-applications)
   - [Server Application](#server-application)
 - [Documentation](#documentation)
@@ -19,13 +19,15 @@ PostgreSQL as the underlying backend.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## About the Fuel Purchase System
+## About the Gas Jot System
 
-The fuel purchase system provides the ability to record and analyze your vehicle's fuel usage.  It currently consists of an iOS (iPhone) application, as well as a server-side REST application (*which the iOS app communicates with*).  In its present form, the fuel purchase system is not terribly useful.  It enables you to collect fuel usage statistics with respect to your vehicles, but none of the analysis / reporting functionality is built out yet.
+The Gas Jot system provides the ability to record and analyze your vehicle's
+gas usage.  It currently consists of an iOS (iPhone) application, as well as a
+server-side REST application (*which the iOS app communicates with*).
 
 ### Client Applications
 
-Currently there only exists an iOS application for the fuel purchase system: [PEFuelPurchase-App](https://github.com/evanspa/PEFuelPurchase-App).
+Currently there only exists an iOS application for the Gas Jot system: [PEFuelPurchase-App](https://github.com/evanspa/PEFuelPurchase-App).
 
 ### Server Application
 
