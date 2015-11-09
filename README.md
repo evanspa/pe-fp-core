@@ -1,9 +1,9 @@
-# pe-fp-core
+# pe-gasjot-core
 
-[![Build Status](https://travis-ci.org/evanspa/pe-fp-core.svg)](https://travis-ci.org/evanspa/pe-fp-core)
+[![Build Status](https://travis-ci.org/evanspa/pe-gasjot-core.svg)](https://travis-ci.org/evanspa/pe-gasjot-core)
 
 A Clojure library encapsulating the server-side core logic, model and data
-access functionality of the Gas Jot system.  pe-fp-core leverages
+access functionality of the Gas Jot system.  pe-gasjot-core leverages
 PostgreSQL as the underlying backend.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -27,21 +27,22 @@ server-side REST application (*which the iOS app communicates with*).
 
 ### Client Applications
 
-Currently there only exists an iOS application for the Gas Jot system: [PEFuelPurchase-App](https://github.com/evanspa/PEFuelPurchase-App).
+Currently there only exists an iOS application for the Gas Jot system:
+[Gas Jot iOS App](https://github.com/evanspa/GasJot-ios).
 
 ### Server Application
 
-The server-side REST application is implemented using Clojure: [pe-fp-app](https://github.com/evanspa/pe-fp-app).  This repository, *pe-fp-core*, is used by it indirectly through the [pe-fp-rest](https://github.com/evanspa/pe-fp-rest) library.
+The server-side REST application is implemented using Clojure: [pe-gasjot-app](https://github.com/evanspa/pe-gasjot-app).  This repository, *pe-gasjot-core*, is used by it indirectly through the [pe-gasjot-rest](https://github.com/evanspa/pe-gasjot-rest) library.
 
-pe-fp-core makes use of the [pe-* Clojure library suite](#pe--clojure-library-suite).
+pe-gasjot-core makes use of the [pe-* Clojure library suite](#pe--clojure-library-suite).
 
 ## Documentation
 
-* [API Docs](http://evanspa.github.com/pe-fp-core)
+* [API Docs](http://evanspa.github.com/pe-gasjot-core)
 
 ## Installation
 
-pe-fp-core is available from Clojars.  Add the following dependency to your
+pe-gasjot-core is available from Clojars.  Add the following dependency to your
 `project.clj` file:
 
 ```
