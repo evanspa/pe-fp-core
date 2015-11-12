@@ -1,5 +1,5 @@
 (defproject pe-fp-core "0.0.26-SNAPSHOT"
-  :description "A Clojure library encapsulating the various domain objects associated with the fuel purchase application."
+  :description "A Clojure library encapsulating the various domain objects associated with the Gas Jot application."
   :url "https://github.com/evanspa/pe-fp-core"
   :license {:name "MIT"
             :url "http://opensource.org/licenses/MIT"}
@@ -19,7 +19,7 @@
                  [pe-user-core "0.1.36"]]
   :resource-paths ["resources"]
   :codox {:exclude [user]
-          :src-dir-uri "https://github.com/evanspa/pe-fp-core/blob/0.0.25/"
+          :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.26/"
           :src-linenum-anchor-prefix "L"}
   :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-loaded
                    :plugins [[cider/cider-nrepl "0.10.0-SNAPSHOT"]]
