@@ -50,6 +50,12 @@
 (def v4-fplog-add-odometer-col
   (format "ALTER TABLE %s ADD COLUMN odometer numeric NULL", tbl-fplog))
 
+(def v5-vehicle-add-diesel-col
+  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-vehicle))
+
+(def v5-fplog-add-diesel-col
+  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-fplog))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

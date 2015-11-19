@@ -106,12 +106,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle-related validation definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def sv-any-issues               (bit-shift-left 1 0))
-(def sv-name-not-provided        (bit-shift-left 1 1)) ; for POST/PUT
-(def sv-vehicle-already-exists   (bit-shift-left 1 2)) ; for POST
-(def sv-vehicle-cannot-be-purple (bit-shift-left 1 3))
-(def sv-vehicle-cannot-be-red    (bit-shift-left 1 4))
-(def sv-user-does-not-exist      (bit-shift-left 1 5))
+(def sv-any-issues                   (bit-shift-left 1 0))
+(def sv-name-not-provided            (bit-shift-left 1 1)) ; for POST/PUT
+(def sv-vehicle-already-exists       (bit-shift-left 1 2)) ; for POST
+(def sv-vehicle-cannot-be-purple     (bit-shift-left 1 3))
+(def sv-vehicle-cannot-be-red        (bit-shift-left 1 4))
+(def sv-user-does-not-exist          (bit-shift-left 1 5))
+(def sv-cannot-be-both-diesel-octane (bit-shift-left 1 6))
 
 (defn save-vehicle-validation-mask
   [{name :fpvehicle/name
@@ -128,10 +129,17 @@
       (ucore/add-condition #(and (contains? vehicle :fpvehicle/name)
                                  (empty? name))
                            sv-name-not-provided
+                           sv-any-issues)
+      (ucore/add-condition #(and (and (contains? vehicle :fpvehicle/default-octane)
+                                      (not (nil? (:fpvehicle/default-octane vehicle))))
+                                 (and (contains? vehicle :fpvehicle/is-diesel)
+                                      (:fpvehicle/is-diesel vehicle)))
+                           sv-cannot-be-both-diesel-octane
                            sv-any-issues)))
 
 (defn create-vehicle-validation-mask
-  [{name :fpvehicle/name}]
+  [{name :fpvehicle/name
+    :as vehicle}]
   (-> 0
       (ucore/add-condition #(and (not (nil? name))
                                  (.contains name "purple"))
@@ -143,4 +151,10 @@
                            sv-any-issues)
       (ucore/add-condition #(empty? name)
                            sv-name-not-provided
+                           sv-any-issues)
+      (ucore/add-condition #(and (and (contains? vehicle :fpvehicle/default-octane)
+                                      (not (nil? (:fpvehicle/default-octane vehicle))))
+                                 (and (contains? vehicle :fpvehicle/is-diesel)
+                                      (:fpvehicle/is-diesel vehicle)))
+                           sv-cannot-be-both-diesel-octane
                            sv-any-issues)))

@@ -56,7 +56,8 @@
                                         fpddl/v2-vehicle-drop-erroneous-unique-name-constraint
                                         fpddl/v2-vehicle-add-proper-unique-name-constraint
                                         fpddl/v3-vehicle-drop-erroneous-unique-name-constraint-again
-                                        fpddl/v3-vehicle-add-proper-unique-name-constraint-take-2)
+                                        fpddl/v3-vehicle-add-proper-unique-name-constraint-take-2
+                                        fpddl/v5-vehicle-add-diesel-col)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
@@ -76,7 +77,8 @@
                       (j/db-do-commands db-spec
                                         true
                                         fpddl/v0-create-fplog-ddl
-                                        fpddl/v4-fplog-add-odometer-col)
+                                        fpddl/v4-fplog-add-odometer-col
+                                        fpddl/v5-fplog-add-diesel-col)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fplog-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
@@ -436,6 +438,7 @@
                                new-vehicle-id-1
                                {:fpvehicle/name "Jeep"
                                 :fpvehicle/default-octane 87
+                                :fpvehicle/is-diesel false
                                 :fpvehicle/fuel-capacity 24.3})
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (empty? (core/vehicles-for-user conn new-user-id-2)))
@@ -451,6 +454,7 @@
                                new-vehicle-id-3
                                {:fpvehicle/name "Honda Accord"
                                 :fpvehicle/fuel-capacity 19.8
+                                :fpvehicle/is-diesel false
                                 :fpvehicle/default-octane 89})
         (is (= 2 (count (core/vehicles-for-user conn new-user-id-1))))
         (is (= 1 (count (core/vehicles-for-user conn new-user-id-2))))
@@ -483,7 +487,23 @@
           (is (= "Honda Accord" (:fpvehicle/name vehicle)))
           (is (= new-user-id-1 (:fpvehicle/user-id vehicle)))
           (is (= 19.8M (:fpvehicle/fuel-capacity vehicle)))
-          (is (= 89 (:fpvehicle/default-octane vehicle))))))))
+          (is (= 89 (:fpvehicle/default-octane vehicle)))
+          (is (= false (:fpvehicle/is-diesel vehicle))))
+        (let [new-vehicle-id-5 (core/next-vehicle-id conn)]
+          (core/save-new-vehicle conn
+                                 new-user-id-1
+                                 new-vehicle-id-5
+                                 {:fpvehicle/name "Ford F-150"
+                                  :fpvehicle/is-diesel true
+                                  :fpvehicle/fuel-capacity 25.3})
+          (let [[vehicle-id vehicle] (core/vehicle-by-id conn new-vehicle-id-5)]
+            (is (not (nil? vehicle)))
+            (is (= new-vehicle-id-5 (:fpvehicle/id vehicle)))
+            (is (= "Ford F-150" (:fpvehicle/name vehicle)))
+            (is (= new-user-id-1 (:fpvehicle/user-id vehicle)))
+            (is (= 25.3M (:fpvehicle/fuel-capacity vehicle)))
+            (is (= true (:fpvehicle/is-diesel vehicle)))
+            (is (nil? (:fpvehicle/default-octane vehicle)))))))))
 
 (deftest Vehicles-Err-Handling-1
   (testing "Error handling with vehicles, part 1"
@@ -626,3 +646,29 @@
                     cause (-> e ex-data :cause)]
                 (is (= type :precondition-failed))
                 (is (= cause :unmodified-since-check-failed))))))))))
+
+(deftest Vehicles-Err-Handling-4
+  (testing "Error handling with vehicles, part 4"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        (testing "Try to create a vehicle that is invalid"
+          (try
+            (core/save-new-vehicle conn
+                                   new-user-id-1
+                                   new-vehicle-id-1
+                                   {:fpvehicle/name "Jeep"
+                                    :fpvehicle/default-octane 87
+                                    :fpvehicle/is-diesel true
+                                    :fpvehicle/fuel-capacity 24.3})
+            (is false "Should not have reached this")
+            (catch IllegalArgumentException e
+              (let [msg-mask (Long/parseLong (.getMessage e))]
+                (is (pos? (bit-and msg-mask val/sv-any-issues)))
+                (is (pos? (bit-and msg-mask val/sv-cannot-be-both-diesel-octane)))))))))))

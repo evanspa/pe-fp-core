@@ -37,6 +37,7 @@
                         (ucore/replace-if-contains :user_id        :fpvehicle/user-id)
                         (ucore/replace-if-contains :name           :fpvehicle/name)
                         (ucore/replace-if-contains :default_octane :fpvehicle/default-octane)
+                        (ucore/replace-if-contains :is_diesel      :fpvehicle/is-diesel)
                         (ucore/replace-if-contains :fuel_capacity  :fpvehicle/fuel-capacity)
                         (ucore/replace-if-contains :updated_count  :fpvehicle/updated-count)
                         (ucore/replace-if-contains :updated_at     :fpvehicle/updated-at from-sql-time-fn)
@@ -71,6 +72,7 @@
                       (ucore/replace-if-contains :got_car_wash              :fplog/got-car-wash)
                       (ucore/replace-if-contains :car_wash_per_gal_discount :fplog/car-wash-per-gal-discount)
                       (ucore/replace-if-contains :num_gallons               :fplog/num-gallons)
+                      (ucore/replace-if-contains :is_diesel                 :fplog/is-diesel)
                       (ucore/replace-if-contains :octane                    :fplog/octane)
                       (ucore/replace-if-contains :odometer                  :fplog/odometer)
                       (ucore/replace-if-contains :gallon_price              :fplog/gallon-price)
@@ -112,6 +114,7 @@
    [:fplog/got-car-wash              :got_car_wash]
    [:fplog/car-wash-per-gal-discount :car_wash_per_gal_discount]
    [:fplog/num-gallons               :num_gallons]
+   [:fplog/is-diesel                 :is_diesel]
    [:fplog/octane                    :octane]
    [:fplog/odometer                  :odometer]
    [:fplog/gallon-price              :gallon_price]])
@@ -436,6 +439,7 @@
 (def vehicle-key-pairs
   [[:fpvehicle/user-id        :user_id]
    [:fpvehicle/default-octane :default_octane]
+   [:fpvehicle/is-diesel      :is_diesel]
    [:fpvehicle/fuel-capacity  :fuel_capacity]
    [:fpvehicle/name           :name]])
 
