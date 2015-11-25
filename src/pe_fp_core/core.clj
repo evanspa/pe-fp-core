@@ -38,6 +38,7 @@
                         (ucore/replace-if-contains :name           :fpvehicle/name)
                         (ucore/replace-if-contains :default_octane :fpvehicle/default-octane)
                         (ucore/replace-if-contains :is_diesel      :fpvehicle/is-diesel)
+                        (ucore/replace-if-contains :field_set_mask :fpvehicle/field-set-mask)
                         (ucore/replace-if-contains :fuel_capacity  :fpvehicle/fuel-capacity)
                         (ucore/replace-if-contains :updated_count  :fpvehicle/updated-count)
                         (ucore/replace-if-contains :updated_at     :fpvehicle/updated-at from-sql-time-fn)
@@ -440,6 +441,7 @@
   [[:fpvehicle/user-id        :user_id]
    [:fpvehicle/default-octane :default_octane]
    [:fpvehicle/is-diesel      :is_diesel]
+   [:fpvehicle/field-set-mask :field_set_mask]
    [:fpvehicle/fuel-capacity  :fuel_capacity]
    [:fpvehicle/name           :name]])
 

@@ -56,6 +56,9 @@
 (def v5-fplog-add-diesel-col
   (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-fplog))
 
+(def v5-vehicle-add-field-set-mask-col
+  (format "ALTER TABLE %s ADD COLUMN field_set_mask integer NULL", tbl-vehicle))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
