@@ -40,6 +40,8 @@
                         (ucore/replace-if-contains :is_diesel      :fpvehicle/is-diesel)
                         (ucore/replace-if-contains :field_set_mask :fpvehicle/field-set-mask)
                         (ucore/replace-if-contains :fuel_capacity  :fpvehicle/fuel-capacity)
+                        (ucore/replace-if-contains :vin            :fpvehicle/vin)
+                        (ucore/replace-if-contains :plate          :fpvehicle/plate)
                         (ucore/replace-if-contains :updated_count  :fpvehicle/updated-count)
                         (ucore/replace-if-contains :updated_at     :fpvehicle/updated-at from-sql-time-fn)
                         (ucore/replace-if-contains :deleted_at     :fpvehicle/deleted-at from-sql-time-fn)
@@ -443,6 +445,8 @@
    [:fpvehicle/is-diesel      :is_diesel]
    [:fpvehicle/field-set-mask :field_set_mask]
    [:fpvehicle/fuel-capacity  :fuel_capacity]
+   [:fpvehicle/vin            :vin]
+   [:fpvehicle/plate          :plate]
    [:fpvehicle/name           :name]])
 
 (defn vehicle-deps

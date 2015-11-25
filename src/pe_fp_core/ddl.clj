@@ -59,6 +59,12 @@
 (def v5-vehicle-add-field-set-mask-col
   (format "ALTER TABLE %s ADD COLUMN field_set_mask integer NULL", tbl-vehicle))
 
+(def v5-vehicle-add-vin-col
+  (format "ALTER TABLE %s ADD COLUMN vin text NULL", tbl-vehicle))
+
+(def v5-vehicle-add-plate-col
+  (format "ALTER TABLE %s ADD COLUMN plate text NULL", tbl-vehicle))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

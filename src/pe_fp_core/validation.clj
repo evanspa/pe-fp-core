@@ -15,6 +15,8 @@
 (def sfplog-user-does-not-exist        (bit-shift-left 1 8))
 (def sfplog-vehicle-does-not-exist     (bit-shift-left 1 9))
 (def sfplog-fuelstation-does-not-exist (bit-shift-left 1 10))
+(def sfplog-odometer-not-provided      (bit-shift-left 1 11))
+(def sfplog-odometer-negative          (bit-shift-left 1 12))
 
 (defn save-fplog-validation-mask
   [fplog]
@@ -24,7 +26,8 @@
   [{purchase-date :fplog/purchased-at
     num-gallons   :fplog/num-gallons
     octane        :fplog/octane
-    gallon-price  :fplog/gallon-price}]
+    gallon-price  :fplog/gallon-price
+    odometer      :fplog/odometer}]
   (-> 0
       (ucore/add-condition #(nil? num-gallons)
                            sfplog-num-gallons-not-provided
@@ -34,6 +37,9 @@
                            sfplog-any-issues)
       (ucore/add-condition #(nil? gallon-price)
                            sfplog-gallon-price-not-provided
+                           sfplog-any-issues)
+      (ucore/add-condition #(nil? odometer)
+                           sfplog-odometer-not-provided
                            sfplog-any-issues)
       (ucore/add-condition #(nil? purchase-date)
                            sfplog-purchased-at-not-provided
@@ -49,6 +55,10 @@
       (ucore/add-condition #(and (not (nil? gallon-price))
                                  (< gallon-price 0))
                            sfplog-gallon-price-negative
+                           sfplog-any-issues)
+      (ucore/add-condition #(and (not (nil? odometer))
+                                 (< odometer 0))
+                           sfplog-odometer-negative
                            sfplog-any-issues)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
