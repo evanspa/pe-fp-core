@@ -58,7 +58,10 @@
                                         fpddl/v3-vehicle-drop-erroneous-unique-name-constraint-again
                                         fpddl/v3-vehicle-add-proper-unique-name-constraint-take-2
                                         fpddl/v5-vehicle-add-diesel-col
-                                        fpddl/v5-vehicle-add-field-set-mask-col
+                                        fpddl/v5-vehicle-add-has-dte-readout-col
+                                        fpddl/v5-vehicle-add-has-mpg-readout-col
+                                        fpddl/v5-vehicle-add-has-mph-readout-col
+                                        fpddl/v5-vehicle-add-has-outside-temp-readout-col
                                         fpddl/v5-vehicle-add-vin-col
                                         fpddl/v5-vehicle-add-plate-col)
                       (jcore/with-try-catch-exec-as-query db-spec

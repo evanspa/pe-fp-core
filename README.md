@@ -46,7 +46,7 @@ pe-gasjot-core is available from Clojars.  Add the following dependency to your
 `project.clj` file:
 
 ```
-[pe-fp-core "0.0.30"]
+[pe-fp-core "0.0.31"]
 ```
 
 ## pe-* Clojure Library Suite

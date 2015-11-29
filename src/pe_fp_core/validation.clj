@@ -32,9 +32,6 @@
       (ucore/add-condition #(nil? num-gallons)
                            sfplog-num-gallons-not-provided
                            sfplog-any-issues)
-      (ucore/add-condition #(nil? octane)
-                           sfplog-octane-not-provided
-                           sfplog-any-issues)
       (ucore/add-condition #(nil? gallon-price)
                            sfplog-gallon-price-not-provided
                            sfplog-any-issues)

@@ -33,19 +33,22 @@
 (defn rs->vehicle
   [vehicle-rs]
   [(:id vehicle-rs) (-> vehicle-rs
-                        (ucore/replace-if-contains :id             :fpvehicle/id)
-                        (ucore/replace-if-contains :user_id        :fpvehicle/user-id)
-                        (ucore/replace-if-contains :name           :fpvehicle/name)
-                        (ucore/replace-if-contains :default_octane :fpvehicle/default-octane)
-                        (ucore/replace-if-contains :is_diesel      :fpvehicle/is-diesel)
-                        (ucore/replace-if-contains :field_set_mask :fpvehicle/field-set-mask)
-                        (ucore/replace-if-contains :fuel_capacity  :fpvehicle/fuel-capacity)
-                        (ucore/replace-if-contains :vin            :fpvehicle/vin)
-                        (ucore/replace-if-contains :plate          :fpvehicle/plate)
-                        (ucore/replace-if-contains :updated_count  :fpvehicle/updated-count)
-                        (ucore/replace-if-contains :updated_at     :fpvehicle/updated-at from-sql-time-fn)
-                        (ucore/replace-if-contains :deleted_at     :fpvehicle/deleted-at from-sql-time-fn)
-                        (ucore/replace-if-contains :created_at     :fpvehicle/created-at from-sql-time-fn))])
+                        (ucore/replace-if-contains :id                       :fpvehicle/id)
+                        (ucore/replace-if-contains :user_id                  :fpvehicle/user-id)
+                        (ucore/replace-if-contains :name                     :fpvehicle/name)
+                        (ucore/replace-if-contains :default_octane           :fpvehicle/default-octane)
+                        (ucore/replace-if-contains :is_diesel                :fpvehicle/is-diesel)
+                        (ucore/replace-if-contains :has_dte_readout          :fpvehicle/has-dte-readout)
+                        (ucore/replace-if-contains :has_mpg_readout          :fpvehicle/has-mpg-readout)
+                        (ucore/replace-if-contains :has_mph_readout          :fpvehicle/has-mph-readout)
+                        (ucore/replace-if-contains :has_outside_temp_readout :fpvehicle/has-outside-temp-readout)
+                        (ucore/replace-if-contains :fuel_capacity            :fpvehicle/fuel-capacity)
+                        (ucore/replace-if-contains :vin                      :fpvehicle/vin)
+                        (ucore/replace-if-contains :plate                    :fpvehicle/plate)
+                        (ucore/replace-if-contains :updated_count            :fpvehicle/updated-count)
+                        (ucore/replace-if-contains :updated_at               :fpvehicle/updated-at from-sql-time-fn)
+                        (ucore/replace-if-contains :deleted_at               :fpvehicle/deleted-at from-sql-time-fn)
+                        (ucore/replace-if-contains :created_at               :fpvehicle/created-at from-sql-time-fn))])
 
 (defn rs->fuelstation
   [fuelstation-rs]
@@ -440,14 +443,17 @@
 ;; Vehicle-related definitions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def vehicle-key-pairs
-  [[:fpvehicle/user-id        :user_id]
-   [:fpvehicle/default-octane :default_octane]
-   [:fpvehicle/is-diesel      :is_diesel]
-   [:fpvehicle/field-set-mask :field_set_mask]
-   [:fpvehicle/fuel-capacity  :fuel_capacity]
-   [:fpvehicle/vin            :vin]
-   [:fpvehicle/plate          :plate]
-   [:fpvehicle/name           :name]])
+  [[:fpvehicle/user-id                  :user_id]
+   [:fpvehicle/default-octane           :default_octane]
+   [:fpvehicle/is-diesel                :is_diesel]
+   [:fpvehicle/has-dte-readout          :has_dte_readout]
+   [:fpvehicle/has-mpg-readout          :has_mpg_readout]
+   [:fpvehicle/has-mph-readout          :has_mph_readout]
+   [:fpvehicle/has-outside-temp-readout :has_outside_temp_readout]
+   [:fpvehicle/fuel-capacity            :fuel_capacity]
+   [:fpvehicle/vin                      :vin]
+   [:fpvehicle/plate                    :plate]
+   [:fpvehicle/name                     :name]])
 
 (defn vehicle-deps
   ([db-spec]

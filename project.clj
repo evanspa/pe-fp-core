@@ -19,7 +19,7 @@
                  [pe-user-core "0.1.38"]]
   :resource-paths ["resources"]
   :codox {:exclude [user]
-          :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.30/"
+          :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.31/"
           :src-linenum-anchor-prefix "L"}
   :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-loaded
                    :plugins [[cider/cider-nrepl "0.10.0-SNAPSHOT"]]

@@ -56,14 +56,23 @@
 (def v5-fplog-add-diesel-col
   (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-fplog))
 
-(def v5-vehicle-add-field-set-mask-col
-  (format "ALTER TABLE %s ADD COLUMN field_set_mask integer NULL", tbl-vehicle))
-
 (def v5-vehicle-add-vin-col
   (format "ALTER TABLE %s ADD COLUMN vin text NULL", tbl-vehicle))
 
 (def v5-vehicle-add-plate-col
   (format "ALTER TABLE %s ADD COLUMN plate text NULL", tbl-vehicle))
+
+(def v5-vehicle-add-has-dte-readout-col
+  (format "ALTER TABLE %s ADD COLUMN has_dte_readout boolean NULL", tbl-vehicle))
+
+(def v5-vehicle-add-has-mpg-readout-col
+  (format "ALTER TABLE %s ADD COLUMN has_mpg_readout boolean NULL", tbl-vehicle))
+
+(def v5-vehicle-add-has-mph-readout-col
+  (format "ALTER TABLE %s ADD COLUMN has_mph_readout boolean NULL", tbl-vehicle))
+
+(def v5-vehicle-add-has-outside-temp-readout-col
+  (format "ALTER TABLE %s ADD COLUMN has_outside_temp_readout boolean NULL", tbl-vehicle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers
