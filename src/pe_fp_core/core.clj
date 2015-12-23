@@ -55,6 +55,7 @@
   [(:id fuelstation-rs) (-> fuelstation-rs
                             (ucore/replace-if-contains :id            :fpfuelstation/id)
                             (ucore/replace-if-contains :user_id       :fpfuelstation/user-id)
+                            (ucore/replace-if-contains :type_id       :fpfuelstation/type-id)
                             (ucore/replace-if-contains :name          :fpfuelstation/name)
                             (ucore/replace-if-contains :street        :fpfuelstation/street)
                             (ucore/replace-if-contains :city          :fpfuelstation/city)
@@ -329,6 +330,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def fuelstation-key-pairs
   [[:fpfuelstation/user-id   :user_id]
+   [:fpfuelstation/type-id   :type_id]
    [:fpfuelstation/name      :name]
    [:fpfuelstation/street    :street]
    [:fpfuelstation/city      :city]

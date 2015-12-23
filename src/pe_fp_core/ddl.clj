@@ -8,6 +8,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (def tbl-vehicle "vehicle")
 (def tbl-fuelstation "fuelstation")
+(def tbl-fuelstation-type "fuelstation_type")
 (def tbl-fplog "fplog")
 (def tbl-envlog "envlog")
 
@@ -48,31 +49,42 @@
           tbl-vehicle))
 
 (def v4-fplog-add-odometer-col
-  (format "ALTER TABLE %s ADD COLUMN odometer numeric NULL", tbl-fplog))
+  (format "ALTER TABLE %s ADD COLUMN odometer numeric NULL" tbl-fplog))
 
 (def v5-vehicle-add-diesel-col
-  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL" tbl-vehicle))
 
 (def v5-fplog-add-diesel-col
-  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL", tbl-fplog))
+  (format "ALTER TABLE %s ADD COLUMN is_diesel boolean NULL" tbl-fplog))
 
 (def v5-vehicle-add-vin-col
-  (format "ALTER TABLE %s ADD COLUMN vin text NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN vin text NULL" tbl-vehicle))
 
 (def v5-vehicle-add-plate-col
-  (format "ALTER TABLE %s ADD COLUMN plate text NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN plate text NULL" tbl-vehicle))
 
 (def v5-vehicle-add-has-dte-readout-col
-  (format "ALTER TABLE %s ADD COLUMN has_dte_readout boolean NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN has_dte_readout boolean NULL" tbl-vehicle))
 
 (def v5-vehicle-add-has-mpg-readout-col
-  (format "ALTER TABLE %s ADD COLUMN has_mpg_readout boolean NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN has_mpg_readout boolean NULL" tbl-vehicle))
 
 (def v5-vehicle-add-has-mph-readout-col
-  (format "ALTER TABLE %s ADD COLUMN has_mph_readout boolean NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN has_mph_readout boolean NULL" tbl-vehicle))
 
 (def v5-vehicle-add-has-outside-temp-readout-col
-  (format "ALTER TABLE %s ADD COLUMN has_outside_temp_readout boolean NULL", tbl-vehicle))
+  (format "ALTER TABLE %s ADD COLUMN has_outside_temp_readout boolean NULL" tbl-vehicle))
+
+(def v6-create-fuelstation-type-ddl
+  (str (format "CREATE TABLE IF NOT EXISTS %s (" tbl-fuelstation-type)
+       "type_id         integer PRIMARY KEY, "
+       "type_name       text    NOT NULL, "
+       "type_sort_order integer NOT NULL)"))
+
+(def v6-fuelstation-add-fstype-col
+  (format "ALTER TABLE %s ADD COLUMN type_id integer REFERENCES %s(type_id)"
+          tbl-fuelstation
+          tbl-fuelstation-type))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers

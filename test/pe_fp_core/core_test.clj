@@ -5,6 +5,7 @@
             [pe-fp-core.core :as core]
             [pe-user-core.ddl :as uddl]
             [pe-fp-core.ddl :as fpddl]
+            [pe-fp-core.data-loads :as fpdataloads]
             [pe-jdbc-utils.core :as jcore]
             [pe-user-core.core :as usercore]
             [clj-time.core :as t]
@@ -69,15 +70,24 @@
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-vehicle-updated-count-trigger-fn db-spec))
 
+                      ;; Fuelstation type setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v6-create-fuelstation-type-ddl)
+
                       ;; Fuelstation setup
                       (j/db-do-commands db-spec
                                         true
                                         fpddl/v0-create-fuelstation-ddl
-                                        fpddl/v0-create-index-on-fuelstation-name)
+                                        fpddl/v0-create-index-on-fuelstation-name
+                                        fpddl/v6-fuelstation-add-fstype-col)
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fuelstation-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-fuelstation-updated-count-trigger-fn db-spec))
+
+                      ;; Populate fuelstation type table
+                      (fpdataloads/v6-data-loads db-spec)
 
                       ;; Fuel purchase log setup
                       (j/db-do-commands db-spec
@@ -364,6 +374,7 @@
                                    new-user-id-1
                                    new-fuelstation-id-1
                                    {:fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/type-id 5
                                     :fpfuelstation/street "110 Maple Street"
                                     :fpfuelstation/city "Mayberry"
                                     :fpfuelstation/state "SC"
@@ -388,6 +399,7 @@
                                    new-user-id-2
                                    new-fuelstation-id-3
                                    {:fpfuelstation/name "Stewart's"
+                                    :fpfuelstation/type-id 23
                                     :fpfuelstation/street "94 Union Street"
                                     :fpfuelstation/city "Schenectady"
                                     :fpfuelstation/state "NY"
@@ -404,6 +416,7 @@
           (is (not (nil? (:fpfuelstation/updated-at fuelstation))))
           (is (= 1 (:fpfuelstation/updated-count fuelstation)))
           (is (= "Stewart's" (:fpfuelstation/name fuelstation)))
+          (is (= 23 (:fpfuelstation/type-id fuelstation)))
           (is (= "94 Union Street" (:fpfuelstation/street fuelstation)))
           (is (= "Schenectady" (:fpfuelstation/city fuelstation)))
           (is (= "NY" (:fpfuelstation/state fuelstation)))
