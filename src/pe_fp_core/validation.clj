@@ -94,11 +94,16 @@
 (def sfs-any-issues          (bit-shift-left 1 0))
 (def sfs-name-not-provided   (bit-shift-left 1 1))
 (def sfs-user-does-not-exist (bit-shift-left 1 2))
+(def sfs-name-cannot-be-purplex (bit-shift-left 1 3))
 
 (defn save-fuelstation-validation-mask
   [{name :fpfuelstation/name
     :as fuelstation}]
   (-> 0
+      (ucore/add-condition #(and (not (nil? name))
+                                 (.contains name "purplex"))
+                           sfs-name-cannot-be-purplex
+                           sfs-any-issues)
       (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/name)
                                  (empty? name))
                            sfs-name-not-provided
