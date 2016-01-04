@@ -91,10 +91,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel Station-related validation definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(def sfs-any-issues          (bit-shift-left 1 0))
-(def sfs-name-not-provided   (bit-shift-left 1 1))
-(def sfs-user-does-not-exist (bit-shift-left 1 2))
+(def sfs-any-issues             (bit-shift-left 1 0))
+(def sfs-name-not-provided      (bit-shift-left 1 1))
+(def sfs-user-does-not-exist    (bit-shift-left 1 2))
 (def sfs-name-cannot-be-purplex (bit-shift-left 1 3))
+(def sfs-latitude-not-numeric   (bit-shift-left 1 4))
+(def sfs-longitude-not-numeric  (bit-shift-left 1 5))
 
 (defn save-fuelstation-validation-mask
   [{name :fpfuelstation/name
@@ -107,6 +109,14 @@
       (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/name)
                                  (empty? name))
                            sfs-name-not-provided
+                           sfs-any-issues)
+      (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/latitude)
+                                 (not (number? (:fpfuelstation/latitude))))
+                           sfs-latitude-not-numeric
+                           sfs-any-issues)
+      (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/longitude)
+                                 (not (number? (:fpfuelstation/longitude))))
+                           sfs-longitude-not-numeric
                            sfs-any-issues)))
 
 (defn create-fuelstation-validation-mask

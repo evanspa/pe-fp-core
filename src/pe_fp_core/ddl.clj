@@ -11,6 +11,7 @@
 (def tbl-fuelstation-type "fuelstation_type")
 (def tbl-fplog "fplog")
 (def tbl-envlog "envlog")
+(def tbl-price-event "price_event")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Column Names
@@ -85,6 +86,26 @@
   (format "ALTER TABLE %s ADD COLUMN type_id integer REFERENCES %s(type_id)"
           tbl-fuelstation
           tbl-fuelstation-type))
+
+(def v6-create-price-event-ddl
+  (str (format "CREATE TABLE IF NOT EXISTS %s (" tbl-price-event)
+       "id                 serial           PRIMARY KEY, "
+       (format "fplog_id   integer          NOT NULL REFERENCES %s (id), " tbl-fplog)
+       (format "fs_type_id integer          NOT NULL REFERENCES %s (type_id), " tbl-fuelstation-type)
+       "price              numeric          NOT NULL, "
+       "octane             integer          NULL, "
+       "is_diesel          boolean          NOT NULL, "
+       "event_date         timestamptz      NOT NULL, "
+       "latitude           double precision NOT NULL, "
+       "longitude          double precision NOT NULL)"))
+
+(def v6-create-postgis-extension "create extension postgis")
+
+(defn v6-add-location-col-sql
+  [db-spec]
+  (j/query db-spec
+           (format "select AddGeometryColumn ('public', '%s', 'location', 4326, 'POINT', 2)"
+                   tbl-price-event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Vehicle table, constraints and triggers

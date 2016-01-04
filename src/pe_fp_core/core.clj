@@ -7,7 +7,8 @@
             [pe-fp-core.ddl :as fpddl]
             [pe-core-utils.core :as ucore]
             [clj-time.core :as t]
-            [clj-time.coerce :as c]))
+            [clj-time.coerce :as c])
+  (:import (org.postgis PGgeometry)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -105,10 +106,82 @@
                        (ucore/replace-if-contains :deleted_at            :envlog/deleted-at from-sql-time-fn)
                        (ucore/replace-if-contains :created_at            :envlog/created-at from-sql-time-fn))])
 
+(defn rs->price-event
+  [price-event-rs]
+  [(:id price-event-rs) (-> price-event-rs
+                            (ucore/replace-if-contains :id         :price-event/id)
+                            (ucore/replace-if-contains :fplog_id   :price-event/fplog-id)
+                            (ucore/replace-if-contains :fs_type_id :price-event/fs-type-id)
+                            (ucore/replace-if-contains :price      :price-event/price)
+                            (ucore/replace-if-contains :octane     :price-event/octane)
+                            (ucore/replace-if-contains :is_diesel  :price-event/is-diesel)
+                            (ucore/replace-if-contains :event_date :price-event/event-date from-sql-time-fn)
+                            (ucore/replace-if-contains :latitude   :price-event/latitude)
+                            (ucore/replace-if-contains :longitude  :price-event/longitude)
+                            (ucore/replace-if-contains :distance   :price-event/distance))])
+
 (declare vehicle-by-id)
 (declare fuelstation-by-id)
 (declare fplog-by-id)
 (declare envlog-by-id)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Price event-related definitions.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn save-new-price-event
+  [db-spec fuelstation-id fplog-id fplog]
+  (let [[_ fuelstation] (fuelstation-by-id db-spec fuelstation-id)
+        latitude (:fpfuelstation/latitude fuelstation)
+        longitude (:fpfuelstation/longitude fuelstation)]
+    (when (and (not (nil? latitude)) (not (nil? longitude)))
+      (let [is-diesel (:fplog/is-diesel fplog)
+            is-diesel (if (nil? is-diesel) false is-diesel)
+            fs-type-id (:fpfuelstation/type-id fuelstation)
+            fs-type-id (if (nil? fs-type-id) 0 fs-type-id)
+            loc-pt (PGgeometry/geomFromString (format "POINT(%s %s)" longitude latitude))]
+        (.setSrid loc-pt 4326)
+        (j/insert! db-spec
+                   :price_event
+                   {:fplog_id fplog-id
+                    :fs_type_id fs-type-id
+                    :price (:fplog/gallon-price fplog)
+                    :octane (:fplog/octane fplog)
+                    :is_diesel is-diesel
+                    :event_date (c/to-timestamp (:fplog/purchased-at fplog))
+                    :latitude latitude
+                    :longitude longitude
+                    :location (PGgeometry. loc-pt)})))))
+
+(defn price-event-by-fplog-id
+  [db-spec fplog-id]
+  (let [rs (j/query db-spec
+                    [(format "select * from %s where fplog_id = ?" fpddl/tbl-price-event) fplog-id]
+                    :result-set-fn first)]
+    (when rs
+      (rs->price-event rs))))
+
+(defn nearby-price-events
+  [db-spec
+   latitude
+   longitude
+   distance-within
+   event-date-after
+   sort-by
+   max-results]
+  (let [sort-by-clause (reduce (fn [clause [col dir]] (format "%s%s %s," clause col dir)) "" sort-by)
+        sort-by-clause (.substring sort-by-clause 0 (dec (count sort-by-clause)))
+        qry (str "select id, fplog_id, fs_type_id, price, octane, is_diesel, "
+                 "event_date, latitude, longitude, "
+                 (format "ST_Distance(location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
+                 (format " from %s" fpddl/tbl-price-event)
+                 (format " where ST_DWithin(location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
+                 (if (not (nil? event-date-after)) " and event_date > ?" "")
+                 (format " order by %s" sort-by-clause)
+                 (format " limit %s" max-results))
+        args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
+    (j/query db-spec
+             (vec (concat [qry] args))
+             :row-fn rs->price-event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log-related definitions.
@@ -150,7 +223,8 @@
                          :fplog/created-at
                          :fplog/updated-at
                          nil
-                         (fplog-deps db-spec user-id vehicle-id fuelstation-id)))
+                         (fplog-deps db-spec user-id vehicle-id fuelstation-id))
+  (save-new-price-event db-spec fuelstation-id new-fplog-id fplog))
 
 (defn save-fplog
   ([db-spec fplog-id fplog]
@@ -167,7 +241,10 @@
                       :fplog/updated-at
                       nil
                       (fplog-deps db-spec)
-                      if-unmodified-since)))
+                      if-unmodified-since)
+   (let [price-event (price-event-by-fplog-id db-spec fplog-id)]
+     (j/delete! db-spec :price_event ["fplog_id = ?" fplog-id])
+     (save-new-price-event db-spec (:fplog/fuelstation-id fplog) fplog-id fplog))))
 
 (defn fplogs-for-user
   ([db-spec user-id]
@@ -347,19 +424,21 @@
 
 (defn save-new-fuelstation
   [db-spec user-id new-fuelstation-id fuelstation]
-  (jcore/save-new-entity db-spec
-                         new-fuelstation-id
-                         fuelstation
-                         val/create-fuelstation-validation-mask
-                         val/sfs-any-issues
-                         fuelstation-by-id
-                         :fuelstation
-                         fuelstation-key-pairs
-                         {:user_id user-id}
-                         :fpfuelstation/created-at
-                         :fpfuelstation/updated-at
-                         nil
-                         (fuelstation-deps db-spec user-id)))
+  (let [type-id (:fpfuelstation/type-id fuelstation)
+        type-id (if (nil? type-id) 0 type-id)]
+    (jcore/save-new-entity db-spec
+                           new-fuelstation-id
+                           (assoc fuelstation :fpfuelstation/type-id type-id)
+                           val/create-fuelstation-validation-mask
+                           val/sfs-any-issues
+                           fuelstation-by-id
+                           :fuelstation
+                           fuelstation-key-pairs
+                           {:user_id user-id}
+                           :fpfuelstation/created-at
+                           :fpfuelstation/updated-at
+                           nil
+                           (fuelstation-deps db-spec user-id))))
 
 (defn save-fuelstation
   ([db-spec fuelstation-id fuelstation]

@@ -21,12 +21,13 @@
   :codox {:exclude [user]
           :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.33/"
           :src-linenum-anchor-prefix "L"}
-  :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-loaded
+  :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-load
                    :plugins [[cider/cider-nrepl "0.10.0-SNAPSHOT"]]
                    :dependencies [[org.clojure/tools.namespace "0.2.7"]
                                   [org.clojure/java.classpath "0.2.2"]
                                   [org.clojure/tools.nrepl "0.2.7"]
                                   [org.postgresql/postgresql "9.4-1201-jdbc41"]
+                                  [org.postgis/postgis-jdbc "1.3.3"]
                                   [org.clojure/data.json "0.2.5"]]
                    :resource-paths ["test-resources"]}
              :test {:resource-paths ["test-resources"]}}

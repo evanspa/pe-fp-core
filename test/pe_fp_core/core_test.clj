@@ -108,11 +108,215 @@
                         (fpddl/v0-create-envlog-updated-count-inc-trigger-fn db-spec))
                       (jcore/with-try-catch-exec-as-query db-spec
                         (fpddl/v0-create-envlog-updated-count-trigger-fn db-spec))
+
+                      ;; Price event setup
+                      (j/db-do-commands db-spec
+                                        true
+                                        fpddl/v6-create-postgis-extension
+                                        fpddl/v6-create-price-event-ddl)
+                      (fpddl/v6-add-location-col-sql db-spec)
+
                       (f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(deftest PriceEvents-0
+  (testing "Nearby price events"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-fuelstation-id-1 (core/next-fuelstation-id conn)
+            new-fuelstation-id-2 (core/next-fuelstation-id conn)
+            new-fuelstation-id-3 (core/next-fuelstation-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-fplog-id-1 (core/next-fplog-id conn)
+            new-fplog-id-2 (core/next-fplog-id conn)
+            new-fplog-id-3 (core/next-fplog-id conn)
+            t1 (t/now)
+            t2 (t/now)
+            t3 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        ; Sacramento, CA
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-1
+                                   {:fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/type-id 5
+                                    :fpfuelstation/latitude 38.581572
+                                    :fpfuelstation/longitude -121.4944})
+        ; Houston, TX
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-2
+                                   {:fpfuelstation/name "Quick Mart"
+                                    :fpfuelstation/type-id 6
+                                    :fpfuelstation/latitude 29.760
+                                    :fpfuelstation/longitude -95.369803})
+        ; Albany, NY
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-3
+                                   {:fpfuelstation/name "Andy's"
+                                    :fpfuelstation/latitude 42.652579
+                                    :fpfuelstation/longitude -73.756232})
+        (core/save-new-vehicle conn new-user-id-1 new-vehicle-id-1 {:fpvehicle/name "Jeep"})
+
+        ; Sacramento, CA fplog
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-1 new-fplog-id-1
+                             {:fplog/purchased-at t1 :fplog/got-car-wash true
+                              :fplog/num-gallons 14.7 :fplog/gallon-price 4.99
+                              :fplog/is-diesel false :fplog/octane 87 :fplog/odometer 15803})
+        ; Houston, TX fplog
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-2 new-fplog-id-2
+                             {:fplog/purchased-at t2 :fplog/got-car-wash true
+                              :fplog/num-gallons 14.7 :fplog/gallon-price 2.19
+                              :fplog/is-diesel false :fplog/octane 87 :fplog/odometer 15803})
+        ; Albany, NY fplog
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-3 new-fplog-id-3
+                             {:fplog/purchased-at t3 :fplog/got-car-wash true
+                              :fplog/num-gallons 14.7 :fplog/gallon-price 3.39
+                              :fplog/is-diesel false :fplog/octane 87 :fplog/odometer 15803})
+
+        ; search near Schenectady, NY
+        (let [price-events (core/nearby-price-events conn
+                                                     42.814
+                                                     -73.939
+                                                     10000000
+                                                     nil
+                                                     [["price" "asc"] ["distance" "asc"] ["event_date" "desc"]]
+                                                     5)]
+          (is (= 3 (count price-events)))
+          (let [[[_ event-1]
+                 [_ event-2]
+                 [_ event-3]] price-events]
+            (is (= 2.19M (:price-event/price event-1)))
+            (is (= 3.39M (:price-event/price event-2)))
+            (is (= 4.99M (:price-event/price event-3)))))
+
+        ; this time sort by distance, then price
+        (let [price-events (core/nearby-price-events conn
+                                                     42.814
+                                                     -73.939
+                                                     10000000
+                                                     nil
+                                                     [["distance" "asc"] ["price" "asc"] ["event_date" "desc"]]
+                                                     5)]
+          (is (= 3 (count price-events)))
+          (let [[[_ event-1]
+                 [_ event-2]
+                 [_ event-3]] price-events]
+            ; Albany, then Houston, then Sacramento
+            (is (= 3.39M (:price-event/price event-1)))
+            (is (= 2.19M (:price-event/price event-2)))
+            (is (= 4.99M (:price-event/price event-3)))))))))
+
+(deftest PriceEvents-1
+  (testing "Saving price events"
+    (j/with-db-transaction [conn db-spec]
+      (let [new-user-id-1 (usercore/next-user-account-id conn)
+            new-fuelstation-id-1 (core/next-fuelstation-id conn)
+            new-fuelstation-id-2 (core/next-fuelstation-id conn)
+            new-fuelstation-id-3 (core/next-fuelstation-id conn)
+            new-vehicle-id-1 (core/next-vehicle-id conn)
+            new-fplog-id-1 (core/next-fplog-id conn)
+            new-fplog-id-2 (core/next-fplog-id conn)
+            new-fplog-id-3 (core/next-fplog-id conn)
+            t1 (t/now)
+            t2 (t/now)]
+        (usercore/save-new-user conn
+                                new-user-id-1
+                                {:user/username "smithj"
+                                 :user/email "smithj@test.com"
+                                 :user/name "John Smith"
+                                 :user/password "insecure"})
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-1
+                                   {:fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/type-id 5
+                                    :fpfuelstation/latitude 35.050825
+                                    :fpfuelstation/longitude -80.819054})
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-2
+                                   {:fpfuelstation/name "Quick Mart"
+                                    :fpfuelstation/type-id 6})
+        (core/save-new-fuelstation conn
+                                   new-user-id-1
+                                   new-fuelstation-id-3
+                                   {:fpfuelstation/name "Andy's"
+                                    :fpfuelstation/latitude 40.4
+                                    :fpfuelstation/longitude -81.2})
+        (core/save-new-vehicle conn new-user-id-1 new-vehicle-id-1 {:fpvehicle/name "Jeep"})
+        (is (nil? (core/price-event-by-fplog-id conn new-fplog-id-1)))
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-1 new-fplog-id-1
+                             {:fplog/purchased-at t1
+                              :fplog/got-car-wash true
+                              :fplog/car-wash-per-gal-discount 0.08
+                              :fplog/num-gallons 14.7
+                              :fplog/gallon-price 2.39
+                              :fplog/is-diesel false
+                              :fplog/octane 87
+                              :fplog/odometer 15803})
+        (let [[_ price-event] (core/price-event-by-fplog-id conn new-fplog-id-1)]
+          (is (not (nil? price-event)))
+          (is (= 2.39M (:price-event/price price-event)))
+          (is (= 87 (:price-event/octane price-event)))
+          (is (= t1 (:price-event/event-date price-event)))
+          (is (= false (:price-event/is-diesel price-event)))
+          (is (= 35.050825 (:price-event/latitude price-event)))
+          (is (= -80.819054 (:price-event/longitude price-event)))
+          (is (= new-fplog-id-1 (:price-event/fplog-id price-event)))
+          (is (= 5 (:price-event/fs-type-id price-event))))
+        (core/save-fplog conn new-fplog-id-1 {:fplog/purchased-at t2
+                                              :fplog/gallon-price 2.41
+                                              :fplog/fuelstation-id new-fuelstation-id-3
+                                              :fplog/is-diesel true
+                                              :fplog/octane 89})
+        ; so the fplog was updated; make sure its corresponding price-event was
+        ; also updated
+        (let [[_ price-event] (core/price-event-by-fplog-id conn new-fplog-id-1)]
+          (is (not (nil? price-event)))
+          (is (= 2.41M (:price-event/price price-event)))
+          (is (= 89 (:price-event/octane price-event)))
+          (is (= t2 (:price-event/event-date price-event)))
+          (is (= true (:price-event/is-diesel price-event)))
+          (is (= 40.4 (:price-event/latitude price-event)))
+          (is (= -81.2 (:price-event/longitude price-event)))
+          (is (= new-fplog-id-1 (:price-event/fplog-id price-event)))
+          (is (= 0 (:price-event/fs-type-id price-event))))
+        (core/save-fplog conn new-fplog-id-1 {:fplog/fuelstation-id new-fuelstation-id-2})
+        ; because new-fplog-id-1 was updated with a fs that doesn't have a long/lat
+        (is (nil? (core/price-event-by-fplog-id conn new-fplog-id-1)))
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-2 new-fplog-id-2
+                             {:fplog/purchased-at t1
+                              :fplog/got-car-wash true
+                              :fplog/car-wash-per-gal-discount 0.08
+                              :fplog/num-gallons 14.7
+                              :fplog/gallon-price 2.39
+                              :fplog/is-diesel false
+                              :fplog/octane 87
+                              :fplog/odometer 15803})
+        ; becuase fs-2 has no lat/long defined
+        (is (nil? (core/price-event-by-fplog-id conn new-fplog-id-2)))
+        (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-3 new-fplog-id-3
+                             {:fplog/purchased-at t1
+                              :fplog/got-car-wash true
+                              :fplog/car-wash-per-gal-discount 0.08
+                              :fplog/num-gallons 14.7
+                              :fplog/gallon-price 2.39
+                              :fplog/is-diesel false
+                              :fplog/octane 87
+                              :fplog/odometer 15803})
+        ; although fs-3 was saved with no explicit type-id defined, now, when
+        ; omitted, new fs's will get a default type-id value of 0
+        (is (not (nil? (core/price-event-by-fplog-id conn new-fplog-id-3))))))))
+
 (deftest FuelPurchaseLogs
   (testing "Saving (and then loading) fuel purchase logs"
     (j/with-db-transaction [conn db-spec]
@@ -141,6 +345,7 @@
                                    new-user-id-1
                                    new-fuelstation-id-1
                                    {:fpfuelstation/name "7-Eleven"
+                                    :fpfuelstation/type-id 5
                                     :fpfuelstation/street "110 Maple Street"
                                     :fpfuelstation/city "Mayberry"
                                     :fpfuelstation/state "SC"
@@ -168,17 +373,28 @@
                                new-vehicle-id-2
                                {:fpvehicle/name "300Z"
                                 :fpvehicle/default-octane 93})
-
         (is (empty? (core/fplogs-for-user conn new-user-id-1)))
         (is (empty? (core/fplogs-for-user conn new-user-id-2)))
+        (is (nil? (core/price-event-by-fplog-id conn new-fplog-id-1)))
         (core/save-new-fplog conn new-user-id-1 new-vehicle-id-1 new-fuelstation-id-1 new-fplog-id-1
                              {:fplog/purchased-at t1
                               :fplog/got-car-wash true
                               :fplog/car-wash-per-gal-discount 0.08
                               :fplog/num-gallons 14.7
                               :fplog/gallon-price 2.39
+                              :fplog/is-diesel false
                               :fplog/octane 87
                               :fplog/odometer 15803})
+        (let [[_ price-event] (core/price-event-by-fplog-id conn new-fplog-id-1)]
+          (is (not (nil? price-event)))
+          (is (= 2.39M (:price-event/price price-event)))
+          (is (= 87 (:price-event/octane price-event)))
+          (is (= t1 (:price-event/event-date price-event)))
+          (is (= false (:price-event/is-diesel price-event)))
+          (is (= 35.050825 (:price-event/latitude price-event)))
+          (is (= -80.819054 (:price-event/longitude price-event)))
+          (is (= new-fplog-id-1 (:price-event/fplog-id price-event)))
+          (is (= 5 (:price-event/fs-type-id price-event))))
         (let [fplogs (core/fplogs-for-user conn new-user-id-1)]
           (is (= 1 (count fplogs)))
           (let [[fplog-id fplog] (first fplogs)]
