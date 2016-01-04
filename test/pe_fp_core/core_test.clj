@@ -193,6 +193,11 @@
                  [_ event-2]
                  [_ event-3]] price-events]
             (is (= 2.19M (:price-event/price event-1)))
+            (is (= 87 (:price-event/octane event-1)))
+            (is (= false (:price-event/is-diesel event-1)))
+            (is (= 29.760 (:price-event/latitude event-1)))
+            (is (= -95.369803 (:price-event/longitude event-1)))
+
             (is (= 3.39M (:price-event/price event-2)))
             (is (= 4.99M (:price-event/price event-3)))))
 

@@ -392,8 +392,9 @@
         loc-pt (when (and (not (nil? latitude)) (not (nil? longitude)))
                  (PGgeometry/geomFromString (format "POINT(%s %s)" longitude latitude)))]
     (when (not (nil? loc-pt))
-      (.setSrid loc-pt 4326))
-    loc-pt))
+      (do
+        (.setSrid loc-pt 4326)
+        (PGgeometry. loc-pt)))))
 
 (defn save-new-fuelstation
   [db-spec user-id new-fuelstation-id fuelstation]
