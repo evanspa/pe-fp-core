@@ -109,16 +109,14 @@
 (defn rs->price-event
   [price-event-rs]
   [(:id price-event-rs) (-> price-event-rs
-                            (ucore/replace-if-contains :id         :price-event/id)
-                            (ucore/replace-if-contains :fplog_id   :price-event/fplog-id)
-                            (ucore/replace-if-contains :fs_type_id :price-event/fs-type-id)
-                            (ucore/replace-if-contains :price      :price-event/price)
-                            (ucore/replace-if-contains :octane     :price-event/octane)
-                            (ucore/replace-if-contains :is_diesel  :price-event/is-diesel)
-                            (ucore/replace-if-contains :event_date :price-event/event-date from-sql-time-fn)
-                            (ucore/replace-if-contains :latitude   :price-event/latitude)
-                            (ucore/replace-if-contains :longitude  :price-event/longitude)
-                            (ucore/replace-if-contains :distance   :price-event/distance))])
+                            (ucore/replace-if-contains :type_id      :price-event/fs-type-id)
+                            (ucore/replace-if-contains :gallon_price :price-event/price)
+                            (ucore/replace-if-contains :octane       :price-event/octane)
+                            (ucore/replace-if-contains :is_diesel    :price-event/is-diesel)
+                            (ucore/replace-if-contains :purchased_at :price-event/event-date from-sql-time-fn)
+                            (ucore/replace-if-contains :latitude     :price-event/latitude)
+                            (ucore/replace-if-contains :longitude    :price-event/longitude)
+                            (ucore/replace-if-contains :distance     :price-event/distance))])
 
 (declare vehicle-by-id)
 (declare fuelstation-by-id)
@@ -128,38 +126,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Price event-related definitions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defn save-new-price-event
-  [db-spec fuelstation-id fplog-id fplog]
-  (let [[_ fuelstation] (fuelstation-by-id db-spec fuelstation-id)
-        latitude (:fpfuelstation/latitude fuelstation)
-        longitude (:fpfuelstation/longitude fuelstation)]
-    (when (and (not (nil? latitude)) (not (nil? longitude)))
-      (let [is-diesel (:fplog/is-diesel fplog)
-            is-diesel (if (nil? is-diesel) false is-diesel)
-            fs-type-id (:fpfuelstation/type-id fuelstation)
-            fs-type-id (if (nil? fs-type-id) 0 fs-type-id)
-            loc-pt (PGgeometry/geomFromString (format "POINT(%s %s)" longitude latitude))]
-        (.setSrid loc-pt 4326)
-        (j/insert! db-spec
-                   :price_event
-                   {:fplog_id fplog-id
-                    :fs_type_id fs-type-id
-                    :price (:fplog/gallon-price fplog)
-                    :octane (:fplog/octane fplog)
-                    :is_diesel is-diesel
-                    :event_date (c/to-timestamp (:fplog/purchased-at fplog))
-                    :latitude latitude
-                    :longitude longitude
-                    :location (PGgeometry. loc-pt)})))))
-
-(defn price-event-by-fplog-id
-  [db-spec fplog-id]
-  (let [rs (j/query db-spec
-                    [(format "select * from %s where fplog_id = ?" fpddl/tbl-price-event) fplog-id]
-                    :result-set-fn first)]
-    (when rs
-      (rs->price-event rs))))
-
 (defn nearby-price-events
   [db-spec
    latitude
@@ -170,12 +136,12 @@
    max-results]
   (let [sort-by-clause (reduce (fn [clause [col dir]] (format "%s%s %s," clause col dir)) "" sort-by)
         sort-by-clause (.substring sort-by-clause 0 (dec (count sort-by-clause)))
-        qry (str "select id, fplog_id, fs_type_id, price, octane, is_diesel, "
-                 "event_date, latitude, longitude, "
-                 (format "ST_Distance(location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
-                 (format " from %s" fpddl/tbl-price-event)
-                 (format " where ST_DWithin(location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
-                 (if (not (nil? event-date-after)) " and event_date > ?" "")
+        qry (str "select fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
+                 "f.purchased_at, fs.latitude, fs.longitude, "
+                 (format "ST_Distance(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
+                 (format " from %s f, %s fs" fpddl/tbl-fplog fpddl/tbl-fuelstation)
+                 (format " where f.fuelstation_id = fs.id and ST_DWithin(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
+                 (if (not (nil? event-date-after)) " and f.purchased_at > ?" "")
                  (format " order by %s" sort-by-clause)
                  (format " limit %s" max-results))
         args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
@@ -223,8 +189,7 @@
                          :fplog/created-at
                          :fplog/updated-at
                          nil
-                         (fplog-deps db-spec user-id vehicle-id fuelstation-id))
-  (save-new-price-event db-spec fuelstation-id new-fplog-id fplog))
+                         (fplog-deps db-spec user-id vehicle-id fuelstation-id)))
 
 (defn save-fplog
   ([db-spec fplog-id fplog]
@@ -241,10 +206,7 @@
                       :fplog/updated-at
                       nil
                       (fplog-deps db-spec)
-                      if-unmodified-since)
-   (let [price-event (price-event-by-fplog-id db-spec fplog-id)]
-     (j/delete! db-spec :price_event ["fplog_id = ?" fplog-id])
-     (save-new-price-event db-spec (:fplog/fuelstation-id fplog) fplog-id fplog))))
+                      if-unmodified-since)))
 
 (defn fplogs-for-user
   ([db-spec user-id]
@@ -414,7 +376,8 @@
    [:fpfuelstation/state     :state]
    [:fpfuelstation/zip       :zip]
    [:fpfuelstation/latitude  :latitude]
-   [:fpfuelstation/longitude :longitude]])
+   [:fpfuelstation/longitude :longitude]
+   [:fpfuelstation/location  :location]])
 
 (defn fuelstation-deps
   ([db-spec]
@@ -422,13 +385,26 @@
   ([db-spec user-id-or-key]
    [[#(usercore/load-user-by-id db-spec %) user-id-or-key val/sfs-user-does-not-exist]]))
 
+(defn- location-pt
+  [fuelstation]
+  (let [latitude (:fpfuelstation/latitude fuelstation)
+        longitude (:fpfuelstation/longitude fuelstation)
+        loc-pt (when (and (not (nil? latitude)) (not (nil? longitude)))
+                 (PGgeometry/geomFromString (format "POINT(%s %s)" longitude latitude)))]
+    (when (not (nil? loc-pt))
+      (.setSrid loc-pt 4326))
+    loc-pt))
+
 (defn save-new-fuelstation
   [db-spec user-id new-fuelstation-id fuelstation]
   (let [type-id (:fpfuelstation/type-id fuelstation)
-        type-id (if (nil? type-id) 0 type-id)]
+        type-id (if (nil? type-id) 0 type-id)
+        loc-pt (location-pt fuelstation)]
     (jcore/save-new-entity db-spec
                            new-fuelstation-id
-                           (assoc fuelstation :fpfuelstation/type-id type-id)
+                           (-> fuelstation
+                               (assoc :fpfuelstation/type-id type-id)
+                               (assoc :fpfuelstation/location loc-pt))
                            val/create-fuelstation-validation-mask
                            val/sfs-any-issues
                            fuelstation-by-id
@@ -446,7 +422,7 @@
   ([db-spec fuelstation-id fuelstation if-unmodified-since]
    (jcore/save-entity db-spec
                       fuelstation-id
-                      fuelstation
+                      (assoc fuelstation :fpfuelstation/location (location-pt fuelstation))
                       val/save-fuelstation-validation-mask
                       val/sfs-any-issues
                       fuelstation-by-id

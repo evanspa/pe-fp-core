@@ -58,4 +58,6 @@
     (insert-fstype 36 "Mobile")
     (insert-fstype 37 "Clark")
     (insert-fstype 38 "ARCO"))
-  (j/update! db-spec :fuelstation {:type_id 0} []))
+  (j/update! db-spec :fuelstation {:type_id 0} [])
+  (j/execute! db-spec [(format "update %s set location = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)"
+                               fpddl/tbl-fuelstation)]))
