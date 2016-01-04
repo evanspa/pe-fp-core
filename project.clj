@@ -14,12 +14,13 @@
                  [org.clojure/java.jdbc "0.3.6"]
                  [org.clojure/tools.nrepl "0.2.7"]
                  [com.cemerick/friend "0.2.1"]
+                 [org.postgis/postgis-jdbc "1.3.3"]
                  [pe-core-utils "0.0.11"]
                  [pe-jdbc-utils "0.0.18"]
                  [pe-user-core "0.1.38"]]
   :resource-paths ["resources"]
   :codox {:exclude [user]
-          :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.35/"
+          :src-dir-uri "https://github.com/evanspa/pe-gasjot-core/blob/0.0.36/"
           :src-linenum-anchor-prefix "L"}
   :profiles {:dev {:source-paths ["dev"]  ;ensures 'user.clj' gets auto-load
                    :plugins [[cider/cider-nrepl "0.10.0-SNAPSHOT"]]
@@ -27,7 +28,6 @@
                                   [org.clojure/java.classpath "0.2.2"]
                                   [org.clojure/tools.nrepl "0.2.7"]
                                   [org.postgresql/postgresql "9.4-1201-jdbc41"]
-                                  [org.postgis/postgis-jdbc "1.3.3"]
                                   [org.clojure/data.json "0.2.5"]]
                    :resource-paths ["test-resources"]}
              :test {:resource-paths ["test-resources"]}}
