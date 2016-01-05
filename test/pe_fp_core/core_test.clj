@@ -189,9 +189,9 @@
                                                      [["f.gallon_price" "asc"] ["distance" "asc"] ["f.purchased_at" "desc"]]
                                                      5)]
           (is (= 3 (count price-events)))
-          (let [[[event-1]
-                 [event-2]
-                 [event-3]] price-events]
+          (let [[event-1
+                 event-2
+                 event-3] price-events]
             (is (= 2.19M (:price-event/price event-1)))
             (is (= 87 (:price-event/octane event-1)))
             (is (= false (:price-event/is-diesel event-1)))
@@ -210,9 +210,9 @@
                                                      [["distance" "asc"] ["f.gallon_price" "asc"] ["f.purchased_at" "desc"]]
                                                      5)]
           (is (= 3 (count price-events)))
-          (let [[[event-1]
-                 [event-2]
-                 [event-3]] price-events]
+          (let [[event-1
+                 event-2
+                 event-3] price-events]
             ; Albany, then Houston, then Sacramento
             (is (= 3.39M (:price-event/price event-1)))
             (is (= 2.19M (:price-event/price event-2)))
