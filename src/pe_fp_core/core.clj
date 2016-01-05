@@ -108,15 +108,15 @@
 
 (defn rs->price-event
   [price-event-rs]
-  [(:id price-event-rs) (-> price-event-rs
-                            (ucore/replace-if-contains :type_id      :price-event/fs-type-id)
-                            (ucore/replace-if-contains :gallon_price :price-event/price)
-                            (ucore/replace-if-contains :octane       :price-event/octane)
-                            (ucore/replace-if-contains :is_diesel    :price-event/is-diesel)
-                            (ucore/replace-if-contains :purchased_at :price-event/event-date from-sql-time-fn)
-                            (ucore/replace-if-contains :latitude     :price-event/latitude)
-                            (ucore/replace-if-contains :longitude    :price-event/longitude)
-                            (ucore/replace-if-contains :distance     :price-event/distance))])
+  [(-> price-event-rs
+       (ucore/replace-if-contains :type_id      :price-event/fs-type-id)
+       (ucore/replace-if-contains :gallon_price :price-event/price)
+       (ucore/replace-if-contains :octane       :price-event/octane)
+       (ucore/replace-if-contains :is_diesel    :price-event/is-diesel)
+       (ucore/replace-if-contains :purchased_at :price-event/event-date from-sql-time-fn)
+       (ucore/replace-if-contains :latitude     :price-event/latitude)
+       (ucore/replace-if-contains :longitude    :price-event/longitude)
+       (ucore/replace-if-contains :distance     :price-event/distance))])
 
 (declare vehicle-by-id)
 (declare fuelstation-by-id)
