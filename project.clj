@@ -1,4 +1,4 @@
-(defproject pe-fp-core "0.0.40"
+(defproject pe-fp-core "0.0.41-SNAPSHOT"
   :description "A Clojure library encapsulating the various domain objects associated with the Gas Jot application."
   :url "https://github.com/evanspa/pe-fp-core"
   :license {:name "MIT"
