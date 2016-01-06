@@ -35,31 +35,64 @@
         contains-gallon-price (contains? fplog :fplog/gallon-price)
         contains-purchased-at (contains? fplog :fplog/purchased-at)]
     (-> mask
-        (ucore/add-condition #(and contains-odometer (not (number? odometer)))
+        (ucore/add-condition #(and contains-odometer
+                                   (nil? odometer))
+                             sfplog-odometer-not-provided
+                             sfplog-any-issues)
+        (ucore/add-condition #(and contains-odometer
+                                   (not (nil? odometer))
+                                   (not (number? odometer)))
                              sfplog-odometer-not-numeric
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-odometer (number? odometer) (< odometer 0))
+        (ucore/add-condition #(and contains-odometer
+                                   (number? odometer)
+                                   (< odometer 0))
                              sfplog-odometer-negative
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-num-gallons (not (number? num-gallons)))
+        (ucore/add-condition #(and contains-num-gallons
+                                   (nil? num-gallons))
+                             sfplog-num-gallons-not-provided
+                             sfplog-any-issues)
+        (ucore/add-condition #(and contains-num-gallons
+                                   (not (nil? num-gallons))
+                                   (not (number? num-gallons)))
                              sfplog-num-gallons-not-numeric
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-num-gallons (number? num-gallons) (< num-gallons 0))
+        (ucore/add-condition #(and contains-num-gallons
+                                   (number? num-gallons)
+                                   (< num-gallons 0))
                              sfplog-num-gallons-negative
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-octane (not (number? octane)))
+        (ucore/add-condition #(and contains-octane
+                                   (nil? octane))
+                             sfplog-octane-not-provided
+                             sfplog-any-issues)
+        (ucore/add-condition #(and contains-octane
+                                   (not (nil? octane))
+                                   (not (number? octane)))
                              sfplog-octane-not-numeric
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-octane (number? octane) (< octane 0))
+        (ucore/add-condition #(and contains-octane
+                                   (number? octane)
+                                   (< octane 0))
                              sfplog-octane-negative
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-gallon-price (not (number? gallon-price)))
+        (ucore/add-condition #(and contains-gallon-price
+                                   (nil? gallon-price))
+                             sfplog-gallon-price-not-provided
+                             sfplog-any-issues)
+        (ucore/add-condition #(and contains-gallon-price
+                                   (not (nil? gallon-price))
+                                   (not (number? gallon-price)))
                              sfplog-gallon-price-not-numeric
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-gallon-price (number? gallon-price) (< gallon-price 0))
+        (ucore/add-condition #(and contains-gallon-price
+                                   (number? gallon-price)
+                                   (< gallon-price 0))
                              sfplog-gallon-price-negative
                              sfplog-any-issues)
-        (ucore/add-condition #(and contains-purchased-at (nil? purchased-at))
+        (ucore/add-condition #(and contains-purchased-at
+                                   (nil? purchased-at))
                              sfplog-purchased-at-not-provided
                              sfplog-any-issues))))
 
@@ -111,28 +144,47 @@
         contains-odometer (contains? envlog :envlog/odometer)
         contains-logged-at (contains? envlog :envlog/logged-at)]
     (-> mask
-        (ucore/add-condition #(and contains-logged-at (nil? logged-at))
+        (ucore/add-condition #(and contains-logged-at
+                                   (nil? logged-at))
                              senvlog-logged-at-not-provided
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-odometer (not (number? odometer)))
+        (ucore/add-condition #(and contains-odometer
+                                   (nil? odometer))
+                             senvlog-odometer-not-provided
+                             senvlog-any-issues)
+        (ucore/add-condition #(and contains-odometer
+                                   (not (nil? odometer))
+                                   (not (number? odometer)))
                              senvlog-odometer-not-numeric
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-odometer (number? odometer) (< odometer 0))
+        (ucore/add-condition #(and contains-odometer
+                                   (number? odometer)
+                                   (< odometer 0))
                              senvlog-odometer-negative
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-mpg (not (number? mpg)))
+        (ucore/add-condition #(and contains-mpg
+                                   (not (nil? mpg))
+                                   (not (number? mpg)))
                              senvlog-avg-mpg-not-numeric
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-mpg (number? mpg) (< mpg 0))
+        (ucore/add-condition #(and contains-mpg
+                                   (number? mpg)
+                                   (< mpg 0))
                              senvlog-avg-mpg-negative
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-mph (not (number? mph)))
+        (ucore/add-condition #(and contains-mph
+                                   (not (nil? mph))
+                                   (not (number? mph)))
                              senvlog-avg-mph-not-numeric
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-mph (number? mph) (< mph 0))
+        (ucore/add-condition #(and contains-mph
+                                   (number? mph)
+                                   (< mph 0))
                              senvlog-avg-mph-negative
                              senvlog-any-issues)
-        (ucore/add-condition #(and contains-temp (not (number? temp)))
+        (ucore/add-condition #(and contains-temp
+                                   (not (nil? temp))
+                                   (not (number? temp)))
                              senvlog-outside-temp-not-numeric
                              senvlog-any-issues))))
 
@@ -166,17 +218,21 @@
   [mask {name :fpfuelstation/name :as fuelstation}]
   (let [contains-name (contains? fuelstation :fpfuelstation/name)]
     (-> mask
-        (ucore/add-condition #(and contains-name (empty? name))
+        (ucore/add-condition #(and contains-name
+                                   (empty? name))
                              sfs-name-not-provided
                              sfs-any-issues)
-        (ucore/add-condition #(and contains-name (.contains name "purplex"))
+        (ucore/add-condition #(and contains-name
+                                   (.contains name "purplex"))
                              sfs-name-cannot-be-purplex
                              sfs-any-issues)
         (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/latitude)
+                                   (not (nil? (:fpfuelstation/latitude fuelstation)))
                                    (not (number? (:fpfuelstation/latitude fuelstation))))
                              sfs-latitude-not-numeric
                              sfs-any-issues)
         (ucore/add-condition #(and (contains? fuelstation :fpfuelstation/longitude)
+                                   (not (nil? (:fpfuelstation/longitude fuelstation)))
                                    (not (number? (:fpfuelstation/longitude fuelstation))))
                              sfs-longitude-not-numeric
                              sfs-any-issues))))
