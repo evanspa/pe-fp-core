@@ -110,13 +110,17 @@
   [price-event-rs]
   (-> price-event-rs
       (ucore/replace-if-contains :type_id      :price-event/fs-type-id)
+      (ucore/replace-if-contains :street       :price-event/fs-street)
+      (ucore/replace-if-contains :city         :price-event/fs-city)
+      (ucore/replace-if-contains :state        :price-event/fs-state)
+      (ucore/replace-if-contains :zip          :price-event/fs-zip)
+      (ucore/replace-if-contains :latitude     :price-event/fs-latitude)
+      (ucore/replace-if-contains :longitude    :price-event/fs-longitude)
+      (ucore/replace-if-contains :distance     :price-event/fs-distance)
       (ucore/replace-if-contains :gallon_price :price-event/price)
       (ucore/replace-if-contains :octane       :price-event/octane)
       (ucore/replace-if-contains :is_diesel    :price-event/is-diesel)
-      (ucore/replace-if-contains :purchased_at :price-event/event-date from-sql-time-fn)
-      (ucore/replace-if-contains :latitude     :price-event/latitude)
-      (ucore/replace-if-contains :longitude    :price-event/longitude)
-      (ucore/replace-if-contains :distance     :price-event/distance)))
+      (ucore/replace-if-contains :purchased_at :price-event/event-date from-sql-time-fn)))
 
 (declare vehicle-by-id)
 (declare fuelstation-by-id)
@@ -137,11 +141,12 @@
   (let [sort-by-clause (reduce (fn [clause [col dir]] (format "%s%s %s," clause col dir)) "" sort-by)
         sort-by-clause (.substring sort-by-clause 0 (dec (count sort-by-clause)))
         qry (str "select fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
-                 "f.purchased_at, fs.latitude, fs.longitude, "
+                 "f.purchased_at, fs.latitude, fs.longitude, fs.street, fs.city, fs.state, fs.zip, "
                  (format "ST_Distance(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
                  (format " from %s f, %s fs" fpddl/tbl-fplog fpddl/tbl-fuelstation)
                  (format " where f.fuelstation_id = fs.id and ST_DWithin(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
                  (if (not (nil? event-date-after)) " and f.purchased_at > ?" "")
+                 " and f.deleted_at is null and fs.deleted_at is null"
                  (format " order by %s" sort-by-clause)
                  (format " limit %s" max-results))
         args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
