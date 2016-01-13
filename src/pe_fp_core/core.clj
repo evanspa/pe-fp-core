@@ -109,6 +109,7 @@
 (defn rs->price-event
   [price-event-rs]
   (-> price-event-rs
+      (ucore/replace-if-contains :fs_id        :price-event/fs-id)
       (ucore/replace-if-contains :type_id      :price-event/fs-type-id)
       (ucore/replace-if-contains :street       :price-event/fs-street)
       (ucore/replace-if-contains :city         :price-event/fs-city)
@@ -137,10 +138,11 @@
    distance-within
    event-date-after
    sort-by
-   max-results]
+   max-results
+   min-distance-diff-fs]
   (let [sort-by-clause (reduce (fn [clause [col dir]] (format "%s%s %s," clause col dir)) "" sort-by)
         sort-by-clause (.substring sort-by-clause 0 (dec (count sort-by-clause)))
-        qry (str "select fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
+        qry (str "select fs.id as fs_id, fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
                  "f.purchased_at, fs.latitude, fs.longitude, fs.street, fs.city, fs.state, fs.zip, "
                  (format "ST_Distance(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
                  (format " from %s f, %s fs" fpddl/tbl-fplog fpddl/tbl-fuelstation)
@@ -149,10 +151,25 @@
                  " and f.deleted_at is null and fs.deleted_at is null"
                  (format " order by %s" sort-by-clause)
                  (format " limit %s" max-results))
-        args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
-    (j/query db-spec
-             (vec (concat [qry] args))
-             :row-fn rs->price-event)))
+        args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])
+        rs (j/query db-spec (vec (concat [qry] args)) :row-fn rs->price-event)]
+    (let [filtered-rs (reduce (fn [[fs-ids distances events]
+                                   {fs-id :price-event/fs-id
+                                    dist :price-event/fs-distance
+                                    :as evt}]
+                                (let [new-fs-ids (assoc fs-ids fs-id fs-id)
+                                      new-distances (assoc distances dist dist)]
+                                  (if (nil? (get fs-ids fs-id))
+                                    (if (nil? (get distances dist))
+                                      [new-fs-ids new-distances (conj events evt)]
+                                      [new-fs-ids new-distances events])
+                                    [new-fs-ids new-distances events])))
+                              [{} {} []]
+                              rs)
+          events (nth filtered-rs 2)]
+      (ucore/remove-matches events
+                            #(<= (Math/abs (- (:price-event/fs-distance %1)
+                                              (:price-event/fs-distance %2))) min-distance-diff-fs)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log-related definitions.
