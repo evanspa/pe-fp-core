@@ -187,7 +187,8 @@
                                                      10000000
                                                      nil
                                                      [["f.gallon_price" "asc"] ["distance" "asc"] ["f.purchased_at" "desc"]]
-                                                     5)]
+                                                     5
+                                                     50)]
           (is (= 3 (count price-events)))
           (let [[event-1
                  event-2
@@ -208,7 +209,8 @@
                                                      10000000
                                                      nil
                                                      [["distance" "asc"] ["f.gallon_price" "asc"] ["f.purchased_at" "desc"]]
-                                                     5)]
+                                                     5
+                                                     50)]
           (is (= 3 (count price-events)))
           (let [[event-1
                  event-2
