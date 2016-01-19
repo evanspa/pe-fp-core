@@ -144,7 +144,6 @@
                  " and fs.deleted_at is null"
                  " and fs.street is not null and trim(fs.street, ' ') != ''"
                  " and fs.city is not null and trim(fs.city, ' ') != ''"
-                 " and fs.zip is not null and trim(fs.zip, ' ') != ''"
                  " order by distance asc")
         rs (j/query db-spec [qry])]
     (let [filtered-rs (reduce (fn [[fs-ids distances fuelstations]
@@ -188,16 +187,15 @@
             partial-args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
         (loop [i 0
                events []]
-          (let [next-i (inc i)]
-            (if (or (= next-i num-fuelstations) (= next-i max-results))
-              events
-              (let [fs (nth fuelstations i)]
-                (recur next-i
-                       (let [fs-id (:id fs)
-                             dist (:distance fs)
-                             args (conj partial-args fs-id)
-                             rs (j/query db-spec (vec (concat [qry] args)) :row-fn rs->price-event)]
-                         (conj events (assoc (first rs) :price-event/fs-distance dist)))))))))
+          (if (or (= i num-fuelstations) (= i max-results))
+            events
+            (let [fs (nth fuelstations i)]
+              (recur (inc i)
+                     (let [fs-id (:id fs)
+                           dist (:distance fs)
+                           args (conj partial-args fs-id)
+                           rs (j/query db-spec (vec (concat [qry] args)) :row-fn rs->price-event)]
+                       (conj events (assoc (first rs) :price-event/fs-distance dist))))))))
       [])))
 
 (defn nearby-price-events-by-price

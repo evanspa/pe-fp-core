@@ -145,6 +145,10 @@
                                    new-fuelstation-id-1
                                    {:fpfuelstation/name "7-Eleven"
                                     :fpfuelstation/type-id 5
+                                    :fpfuelstation/city "c"
+                                    :fpfuelstation/state "s"
+                                    :fpfuelstation/street "st"
+                                    :fpfuelstation/zip "z"
                                     :fpfuelstation/latitude 38.581572
                                     :fpfuelstation/longitude -121.4944})
         ; Houston, TX
@@ -153,6 +157,10 @@
                                    new-fuelstation-id-2
                                    {:fpfuelstation/name "Quick Mart"
                                     :fpfuelstation/type-id 6
+                                    :fpfuelstation/city "c"
+                                    :fpfuelstation/state "s"
+                                    :fpfuelstation/street "st"
+                                    :fpfuelstation/zip "z"
                                     :fpfuelstation/latitude 29.760
                                     :fpfuelstation/longitude -95.369803})
         ; Albany, NY
@@ -160,6 +168,10 @@
                                    new-user-id-1
                                    new-fuelstation-id-3
                                    {:fpfuelstation/name "Andy's"
+                                    :fpfuelstation/city "c"
+                                    :fpfuelstation/state "s"
+                                    :fpfuelstation/street "st"
+                                    :fpfuelstation/zip "z"
                                     :fpfuelstation/latitude 42.652579
                                     :fpfuelstation/longitude -73.756232})
         (core/save-new-vehicle conn new-user-id-1 new-vehicle-id-1 {:fpvehicle/name "Jeep"})
@@ -181,14 +193,13 @@
                               :fplog/is-diesel false :fplog/octane 87 :fplog/odometer 15803})
 
         ; search near Schenectady, NY
-        (let [price-events (core/nearby-price-events conn
-                                                     42.814
-                                                     -73.939
-                                                     10000000
-                                                     nil
-                                                     [["f.gallon_price" "asc"] ["distance" "asc"] ["f.purchased_at" "desc"]]
-                                                     5
-                                                     50)]
+        (let [price-events (core/nearby-price-events-by-price conn
+                                                              42.814
+                                                              -73.939
+                                                              100000000
+                                                              nil
+                                                              5
+                                                              50)]
           (is (= 3 (count price-events)))
           (let [[event-1
                  event-2
@@ -206,9 +217,8 @@
         (let [price-events (core/nearby-price-events conn
                                                      42.814
                                                      -73.939
-                                                     10000000
+                                                     100000000
                                                      nil
-                                                     [["distance" "asc"] ["f.gallon_price" "asc"] ["f.purchased_at" "desc"]]
                                                      5
                                                      50)]
           (is (= 3 (count price-events)))
