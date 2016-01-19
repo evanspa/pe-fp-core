@@ -131,45 +131,91 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Price event-related definitions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn nearby-fuelstations
+  [db-spec
+   latitude
+   longitude
+   distance-within
+   min-distance-diff-fs]
+  (let [qry (str "select distinct fs.id, "
+                 (format "ST_Distance(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
+                 (format " from %s fs" fpddl/tbl-fuelstation)
+                 (format " where ST_DWithin(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
+                 " and fs.deleted_at is null"
+                 " and fs.street is not null and trim(fs.street, ' ') != ''"
+                 " and fs.city is not null and trim(fs.city, ' ') != ''"
+                 " and fs.zip is not null and trim(fs.zip, ' ') != ''"
+                 " order by distance asc")
+        rs (j/query db-spec [qry])]
+    (let [filtered-rs (reduce (fn [[fs-ids distances fuelstations]
+                                   {fs-id :id
+                                    dist :distance
+                                    :as fs}]
+                                (let [new-fs-ids (assoc fs-ids fs-id fs-id)
+                                      new-distances (assoc distances dist dist)]
+                                  (if (nil? (get fs-ids fs-id))
+                                    (if (nil? (get distances dist))
+                                      [new-fs-ids new-distances (conj fuelstations fs)]
+                                      [new-fs-ids new-distances fuelstations])
+                                    [new-fs-ids new-distances fuelstations])))
+                              [{} {} []]
+                              rs)
+          events (nth filtered-rs 2)]
+      (ucore/remove-matches events
+                            #(<= (Math/abs (- (:distance %1)
+                                              (:distance %2))) min-distance-diff-fs)))))
+
 (defn nearby-price-events
   [db-spec
    latitude
    longitude
    distance-within
    event-date-after
-   sort-by
    max-results
    min-distance-diff-fs]
-  (let [sort-by-clause (reduce (fn [clause [col dir]] (format "%s%s %s," clause col dir)) "" sort-by)
-        sort-by-clause (.substring sort-by-clause 0 (dec (count sort-by-clause)))
-        qry (str "select fs.id as fs_id, fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
-                 "f.purchased_at, fs.latitude, fs.longitude, fs.street, fs.city, fs.state, fs.zip, "
-                 (format "ST_Distance(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography) as distance" longitude latitude)
-                 (format " from %s f, %s fs" fpddl/tbl-fplog fpddl/tbl-fuelstation)
-                 (format " where f.fuelstation_id = fs.id and ST_DWithin(fs.location, ST_Geomfromtext('POINT(%s %s)', 4326)::geography, %s)" longitude latitude distance-within)
-                 (if (not (nil? event-date-after)) " and f.purchased_at > ?" "")
-                 " and f.deleted_at is null and fs.deleted_at is null"
-                 (format " order by %s" sort-by-clause)
-                 (format " limit %s" max-results))
-        args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])
-        rs (j/query db-spec (vec (concat [qry] args)) :row-fn rs->price-event)]
-    (let [filtered-rs (reduce (fn [[fs-ids distances events]
-                                   {fs-id :price-event/fs-id
-                                    dist :price-event/fs-distance
-                                    :as evt}]
-                                (let [new-fs-ids (assoc fs-ids fs-id fs-id)
-                                      new-distances (assoc distances dist dist)]
-                                  (if (nil? (get fs-ids fs-id))
-                                    (if (nil? (get distances dist))
-                                      [new-fs-ids new-distances (conj events evt)]
-                                      [new-fs-ids new-distances events])
-                                    [new-fs-ids new-distances events])))
-                              [{} {} []]
-                              rs)
-          events (nth filtered-rs 2)]
-      (ucore/remove-matches events
-                            #(<= (Math/abs (- (:price-event/fs-distance %1)
-                                              (:price-event/fs-distance %2))) min-distance-diff-fs)))))
+  (let [fuelstations (nearby-fuelstations db-spec latitude longitude distance-within min-distance-diff-fs)
+        num-fuelstations (count fuelstations)]
+    (if (> num-fuelstations 0)
+      (let [qry (str "select fs.id as fs_id, fs.type_id, f.gallon_price, f.octane, f.is_diesel, "
+                     "f.purchased_at, fs.latitude, fs.longitude, fs.street, fs.city, fs.state, fs.zip "
+                     (format " from %s f, %s fs" fpddl/tbl-fplog fpddl/tbl-fuelstation)
+                     " where f.fuelstation_id = fs.id and f.deleted_at is null"
+                     (if (not (nil? event-date-after)) " and f.purchased_at > ?" "")
+                     " and fs.id = ?"
+                     " and f.gallon_price is not null"
+                     " order by f.gallon_price asc, f.purchased_at desc"
+                     " limit 1")
+            partial-args (if (not (nil? event-date-after)) [(c/to-timestamp event-date-after)] [])]
+        (loop [i 0
+               events []]
+          (let [next-i (inc i)]
+            (if (or (= next-i num-fuelstations) (= next-i max-results))
+              events
+              (let [fs (nth fuelstations i)]
+                (recur next-i
+                       (let [fs-id (:id fs)
+                             dist (:distance fs)
+                             args (conj partial-args fs-id)
+                             rs (j/query db-spec (vec (concat [qry] args)) :row-fn rs->price-event)]
+                         (conj events (assoc (first rs) :price-event/fs-distance dist)))))))))
+      [])))
+
+(defn nearby-price-events-by-price
+  [db-spec
+   latitude
+   longitude
+   distance-within
+   event-date-after
+   max-results
+   min-distance-diff-fs]
+  (let [price-events (nearby-price-events db-spec
+                                          latitude
+                                          longitude
+                                          distance-within
+                                          event-date-after
+                                          max-results
+                                          min-distance-diff-fs)]
+    (sort-by #(vec (map % [:price-event/price :price-event/fs-distance])) price-events)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Fuel purchase log-related definitions.
